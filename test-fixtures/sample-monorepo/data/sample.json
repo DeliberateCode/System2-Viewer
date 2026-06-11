@@ -1,0 +1,31 @@
+{
+  "projects": [
+    {
+      "id": "proj_001",
+      "name": "Alpha",
+      "status": "active",
+      "members": ["user_001", "user_002"]
+    },
+    {
+      "id": "proj_002",
+      "name": "Beta",
+      "status": "inactive",
+      "members": ["user_003"]
+    },
+    {
+      "id": "proj_003",
+      "name": "Gamma",
+      "status": "active",
+      "members": ["user_001", "user_003", "user_004"]
+    }
+  ],
+  "settings": {
+    "maxProjectsPerUser": 10,
+    "defaultRole": "viewer",
+    "featureFlags": {
+      "darkMode": true,
+      "betaFeatures": false,
+      "newDashboard": true
+    }
+  }
+}

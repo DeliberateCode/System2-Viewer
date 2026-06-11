@@ -1,0 +1,8 @@
+node_modules
+dist
+spec
+.system2-viewer
+*.sqlite
+*.tsbuildinfo
+*.bak
+rules-export.json

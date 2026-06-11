@@ -1,0 +1,20 @@
+{
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "destination": "stdout"
+  },
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "cors": {
+      "enabled": true,
+      "origins": ["http://localhost:3000"]
+    }
+  },
+  "cache": {
+    "enabled": true,
+    "ttlSeconds": 300,
+    "maxEntries": 1000
+  }
+}

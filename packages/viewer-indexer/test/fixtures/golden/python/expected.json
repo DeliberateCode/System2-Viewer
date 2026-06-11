@@ -1,0 +1,130 @@
+{
+  "symbols": [
+    {
+      "name": "greet",
+      "kind": "function",
+      "exported": true
+    },
+    {
+      "name": "_private_helper",
+      "kind": "function",
+      "exported": false
+    },
+    {
+      "name": "fetch_data",
+      "kind": "function",
+      "exported": false
+    },
+    {
+      "name": "cached_lookup",
+      "kind": "function",
+      "exported": true,
+      "metadata": {
+        "decorators": ["cache"]
+      }
+    },
+    {
+      "name": "MyClass",
+      "kind": "class",
+      "exported": true
+    },
+    {
+      "name": "__init__",
+      "kind": "method",
+      "exported": false,
+      "metadata": {
+        "nested": true,
+        "parentName": "MyClass",
+        "parentClass": "MyClass",
+        "methodKind": "instance"
+      }
+    },
+    {
+      "name": "get_value",
+      "kind": "method",
+      "exported": false,
+      "metadata": {
+        "nested": true,
+        "parentName": "MyClass",
+        "parentClass": "MyClass",
+        "methodKind": "instance"
+      }
+    },
+    {
+      "name": "create",
+      "kind": "method",
+      "exported": false,
+      "metadata": {
+        "nested": true,
+        "parentName": "MyClass",
+        "parentClass": "MyClass",
+        "methodKind": "staticmethod",
+        "decorators": ["staticmethod"]
+      }
+    },
+    {
+      "name": "from_dict",
+      "kind": "method",
+      "exported": false,
+      "metadata": {
+        "nested": true,
+        "parentName": "MyClass",
+        "parentClass": "MyClass",
+        "methodKind": "classmethod",
+        "decorators": ["classmethod"]
+      }
+    },
+    {
+      "name": "_InternalClass",
+      "kind": "class",
+      "exported": false
+    },
+    {
+      "name": "MAX_RETRIES",
+      "kind": "variable",
+      "exported": true
+    },
+    {
+      "name": "_TIMEOUT",
+      "kind": "variable",
+      "exported": false
+    }
+  ],
+  "imports": [
+    {
+      "specifier": "os",
+      "names": ["os"],
+      "isTypeOnly": false
+    },
+    {
+      "specifier": "sys",
+      "names": ["sys"],
+      "isTypeOnly": false
+    },
+    {
+      "specifier": "pathlib",
+      "names": ["Path"],
+      "isTypeOnly": false
+    },
+    {
+      "specifier": "collections",
+      "names": ["OrderedDict"],
+      "isTypeOnly": false
+    },
+    {
+      "specifier": ".",
+      "names": ["sibling_module"],
+      "isTypeOnly": false
+    },
+    {
+      "specifier": ".utils",
+      "names": ["helper_func"],
+      "isTypeOnly": false
+    },
+    {
+      "specifier": "..parent",
+      "names": ["base_class"],
+      "isTypeOnly": false
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@system2-viewer/viewer-store",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__"
+  ],
+  "dependencies": {
+    "@system2-viewer/viewer-core": "*",
+    "better-sqlite3": "12.10.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.0"
+  }
+}

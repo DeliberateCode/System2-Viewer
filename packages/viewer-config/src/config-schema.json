@@ -1,0 +1,235 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://system2-viewer/config-schema.json",
+  "title": "viewer.config.json",
+  "description": "Configuration file for System2 Viewer. Controls indexing behavior, subsystem definitions, architectural rules, and remote settings.",
+  "type": "object",
+  "required": ["version", "remote"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path or URL to the JSON Schema for this configuration file."
+    },
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version. Must be 1."
+    },
+    "repository": {
+      "type": "object",
+      "description": "Repository-level metadata and file exclusion patterns.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable repository name. Used in claim IDs and display output."
+        },
+        "exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Glob patterns for files and directories to exclude from indexing."
+        }
+      },
+      "additionalProperties": false
+    },
+    "indexing": {
+      "type": "object",
+      "description": "Controls how the indexer processes source files, git history, and symbols.",
+      "properties": {
+        "gitHistoryDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 500,
+          "description": "Maximum number of git commits to mine for co-change data. Set to 0 to skip git history analysis."
+        },
+        "symbolBackend": {
+          "type": "string",
+          "enum": ["treesitter", "lsp", "scip"],
+          "default": "treesitter",
+          "description": "Symbol extraction backend. 'treesitter' is the default and requires no external tooling."
+        },
+        "sqlite": {
+          "type": "object",
+          "description": "SQLite PRAGMA tuning for the local store database.",
+          "properties": {
+            "pageSize": {
+              "type": "integer",
+              "minimum": 512,
+              "maximum": 65536,
+              "default": 4096,
+              "description": "SQLite page size in bytes. Must be a power of 2."
+            },
+            "cacheSize": {
+              "type": "integer",
+              "default": -64000,
+              "description": "SQLite cache size. Negative values specify KB; positive values specify pages."
+            },
+            "mmapSize": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 268435456,
+              "description": "SQLite memory-mapped I/O size in bytes. 0 disables mmap."
+            },
+            "busyTimeout": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 5000,
+              "description": "SQLite busy timeout in milliseconds."
+            }
+          },
+          "additionalProperties": false
+        },
+        "workerCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16,
+          "description": "Number of parallel worker threads for symbol extraction. Defaults to CPU count."
+        },
+        "workerMinFiles": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 500,
+          "description": "Minimum file count before the indexer spawns worker threads."
+        }
+      },
+      "additionalProperties": false
+    },
+    "subsystems": {
+      "type": "array",
+      "description": "Manually defined subsystem boundaries. Overrides inferred subsystems for the given IDs.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "paths"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique subsystem identifier."
+          },
+          "name": {
+            "type": "string",
+            "description": "Human-readable subsystem name."
+          },
+          "paths": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Glob patterns for files belonging to this subsystem."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Architectural dependency rules enforced during check-invariants.",
+      "items": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Rule name, used in violation reports."
+          },
+          "type": {
+            "type": "string",
+            "description": "Rule type (e.g., 'no-import', 'layer')."
+          },
+          "from": {
+            "type": "object",
+            "properties": {
+              "pathGlob": {
+                "type": "string",
+                "description": "Source path glob pattern."
+              }
+            },
+            "additionalProperties": false
+          },
+          "to": {
+            "type": "object",
+            "properties": {
+              "pathGlob": {
+                "type": "string",
+                "description": "Target path glob pattern."
+              }
+            },
+            "additionalProperties": false
+          },
+          "severity": {
+            "type": "string",
+            "description": "Violation severity level."
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether this rule is active."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "claimTypes": {
+      "type": "array",
+      "description": "Custom claim type definitions with optional verification recipes.",
+      "items": {
+        "type": "object",
+        "required": ["id", "displayTemplate"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique claim type identifier. Must not collide with built-in types."
+          },
+          "displayTemplate": {
+            "type": "string",
+            "description": "Template string for human-readable claim display."
+          },
+          "defaultVerificationRecipes": {
+            "type": "array",
+            "description": "Recipes the VerificationEngine runs to check claims of this type.",
+            "items": {
+              "type": "object",
+              "required": ["recipeType", "description"],
+              "properties": {
+                "recipeType": {
+                  "type": "string",
+                  "description": "Recipe type: source_span_check, symbol_exists_check, import_edge_check, or grep_check."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Human-readable description of what this recipe verifies."
+                },
+                "command": {
+                  "type": "string",
+                  "description": "Optional shell command for custom recipe execution."
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "evidenceRequirements": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Evidence types required to support claims of this type."
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "description": "Default severity for claims of this type."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "remote": {
+      "type": "object",
+      "description": "Remote synchronization settings. Currently only enables/disables the feature.",
+      "required": ["enabled"],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether remote synchronization is enabled."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

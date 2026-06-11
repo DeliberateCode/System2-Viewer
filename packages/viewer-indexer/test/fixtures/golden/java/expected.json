@@ -1,0 +1,155 @@
+{
+  "symbols": [
+    {
+      "name": "UserService",
+      "kind": "class",
+      "exported": true,
+      "startLine": 9,
+      "endLine": 37
+    },
+    {
+      "name": "serviceName",
+      "kind": "variable",
+      "exported": true,
+      "startLine": 12,
+      "endLine": 12,
+      "metadata": { "parentClass": "UserService" }
+    },
+    {
+      "name": "maxRetries",
+      "kind": "variable",
+      "exported": false,
+      "startLine": 15,
+      "endLine": 15,
+      "metadata": { "parentClass": "UserService" }
+    },
+    {
+      "name": "UserService",
+      "kind": "function",
+      "exported": true,
+      "startLine": 18,
+      "endLine": 20,
+      "metadata": { "parentClass": "UserService", "isConstructor": true }
+    },
+    {
+      "name": "getUsers",
+      "kind": "method",
+      "exported": true,
+      "startLine": 23,
+      "endLine": 25,
+      "metadata": { "parentClass": "UserService" }
+    },
+    {
+      "name": "logAccess",
+      "kind": "method",
+      "exported": false,
+      "startLine": 28,
+      "endLine": 30,
+      "metadata": { "parentClass": "UserService" }
+    },
+    {
+      "name": "Config",
+      "kind": "class",
+      "exported": true,
+      "startLine": 33,
+      "endLine": 36,
+      "metadata": { "parentClass": "UserService" }
+    },
+    {
+      "name": "url",
+      "kind": "variable",
+      "exported": true,
+      "startLine": 34,
+      "endLine": 34,
+      "metadata": { "parentClass": "Config" }
+    },
+    {
+      "name": "Repository",
+      "kind": "interface",
+      "exported": true,
+      "startLine": 40,
+      "endLine": 43
+    },
+    {
+      "name": "save",
+      "kind": "method",
+      "exported": false,
+      "startLine": 41,
+      "endLine": 41,
+      "metadata": { "parentClass": "Repository" }
+    },
+    {
+      "name": "findById",
+      "kind": "method",
+      "exported": false,
+      "startLine": 42,
+      "endLine": 42,
+      "metadata": { "parentClass": "Repository" }
+    },
+    {
+      "name": "Status",
+      "kind": "class",
+      "exported": true,
+      "startLine": 46,
+      "endLine": 53,
+      "metadata": { "isEnum": true }
+    },
+    {
+      "name": "display",
+      "kind": "method",
+      "exported": true,
+      "startLine": 51,
+      "endLine": 53,
+      "metadata": { "parentClass": "Status" }
+    },
+    {
+      "name": "InternalHelper",
+      "kind": "class",
+      "exported": false,
+      "startLine": 56,
+      "endLine": 58
+    },
+    {
+      "name": "doWork",
+      "kind": "method",
+      "exported": false,
+      "startLine": 57,
+      "endLine": 57,
+      "metadata": { "parentClass": "InternalHelper" }
+    },
+    {
+      "name": "Cacheable",
+      "kind": "interface",
+      "exported": true,
+      "startLine": 61,
+      "endLine": 62,
+      "metadata": { "isAnnotation": true }
+    }
+  ],
+  "imports": [
+    {
+      "specifier": "java.util.List",
+      "names": ["List"],
+      "isTypeOnly": false,
+      "line": 3
+    },
+    {
+      "specifier": "java.util.Map",
+      "names": ["Map"],
+      "isTypeOnly": false,
+      "line": 4
+    },
+    {
+      "specifier": "java.io",
+      "names": ["*"],
+      "isTypeOnly": false,
+      "line": 5
+    },
+    {
+      "specifier": "java.lang.Math.PI",
+      "names": ["PI"],
+      "isTypeOnly": false,
+      "line": 6
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "repository": {
+    "rootMarker": "package.json"
+  },
+  "indexing": {
+    "gitHistoryDepth": 50,
+    "symbolBackend": "tree-sitter"
+  },
+  "rules": [
+    {
+      "id": "no-cli-import-utils-internals",
+      "kind": "forbidden_import",
+      "from": "packages/cli/**",
+      "to": "packages/utils/src/internal/**",
+      "severity": "error",
+      "message": "CLI must not import internal utils modules directly"
+    },
+    {
+      "id": "no-circular-core-api",
+      "kind": "forbidden_import",
+      "from": "packages/core/**",
+      "to": "packages/api/**",
+      "severity": "error",
+      "message": "Core must not depend on API (would create circular dependency)"
+    }
+  ],
+  "excludes": [
+    "scripts/**",
+    "data/**",
+    "**/*.test.ts"
+  ]
+}

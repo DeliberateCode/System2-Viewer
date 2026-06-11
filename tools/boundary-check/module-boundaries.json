@@ -1,0 +1,123 @@
+{
+  "version": "0.5.0",
+  "boundaries": [
+    {
+      "module": "viewer-core",
+      "description": "Pure types, scoring, claim state machine. Leaf package: zero workspace imports, zero external dependencies.",
+      "allowed_imports_from": [],
+      "forbidden_imports_from": [
+        "viewer-config",
+        "viewer-store",
+        "viewer-indexer",
+        "viewer-retrieval",
+        "viewer-verify",
+        "viewer-surface",
+        "viewer-bench"
+      ]
+    },
+    {
+      "module": "viewer-config",
+      "description": "Configuration loading and exclude pattern merging. Leaf package: zero workspace imports. Phase 3: gains claimTypes validation and RuleDef.enabled handling. Phase 5: gains picomatch for glob compilation (replaces hand-rolled globToRegex), gains indexing.sqlite.busyTimeout config key.",
+      "allowed_imports_from": [],
+      "forbidden_imports_from": [
+        "viewer-core",
+        "viewer-store",
+        "viewer-indexer",
+        "viewer-retrieval",
+        "viewer-verify",
+        "viewer-surface",
+        "viewer-bench"
+      ]
+    },
+    {
+      "module": "viewer-store",
+      "description": "SQLite persistence layer. Imports viewer-core for shared types (OQ-1 resolution). C2 store: only designated writers may import this package. Phase 3: gains embeddings table, upsertEmbedding, semanticSearch. Phase 4: gains file_hashes table, schema_migrations table, versioned migration runner, configurable PRAGMAs. Phase 5: gains busy_timeout PRAGMA, deleteFtsForFile method on SnapshotTxn.",
+      "allowed_imports_from": [
+        "viewer-core"
+      ],
+      "forbidden_imports_from": [
+        "viewer-config",
+        "viewer-indexer",
+        "viewer-retrieval",
+        "viewer-verify",
+        "viewer-surface",
+        "viewer-bench"
+      ]
+    },
+    {
+      "module": "viewer-indexer",
+      "description": "File discovery, extraction (TS, JSON, Python, Rust, Go, Java), TS language service adapter, import resolution, git mining, subsystem inference, claim generation. C2 writer: may import viewer-store. Phase 3: gains optional ONNX Runtime embedding computation. Phase 4: gains worker-thread pool, incremental re-indexing, global symbol map, secret scrubbing, grammar checksums, verbose progress. Phase 5: gains Java visitor, picomatch for subsystem glob matching, comprehensive metadata scrubbing, path relativization, batch writer, incremental FTS, rename detection.",
+      "allowed_imports_from": [
+        "viewer-core",
+        "viewer-store"
+      ],
+      "forbidden_imports_from": [
+        "viewer-config",
+        "viewer-retrieval",
+        "viewer-verify",
+        "viewer-surface",
+        "viewer-bench"
+      ]
+    },
+    {
+      "module": "viewer-retrieval",
+      "description": "Structured query operations and retrieval pipeline. Imports viewer-core ONLY. NEVER imports viewer-store; consumes structural ReadHandle interfaces satisfied by shape at composition root. Phase 3: PipelineReadHandle gains optional semanticSearch method; runSemanticStage replaces no-op with embedding similarity. Phase 5: ResultEnvelope gains optional extractionQuality field; buildEnvelope computes extraction quality from partiality; suggestedNextCalls become result-dependent.",
+      "allowed_imports_from": [
+        "viewer-core"
+      ],
+      "forbidden_imports_from": [
+        "viewer-config",
+        "viewer-store",
+        "viewer-indexer",
+        "viewer-verify",
+        "viewer-surface",
+        "viewer-bench"
+      ]
+    },
+    {
+      "module": "viewer-verify",
+      "description": "Verification engine, rules engine, on-demand claims. Imports viewer-core and viewer-retrieval. C2 writer: may import viewer-store at composition boundary only (structural handle pattern, not direct source import).",
+      "allowed_imports_from": [
+        "viewer-core",
+        "viewer-retrieval"
+      ],
+      "forbidden_imports_from": [
+        "viewer-config",
+        "viewer-store",
+        "viewer-indexer",
+        "viewer-surface",
+        "viewer-bench"
+      ]
+    },
+    {
+      "module": "viewer-surface",
+      "description": "Composition root, MCP server, CLI, feedback, rule authoring. Imports all packages. The single place where real viewer-store handles are bound to retrieval/verify operations. Phase 3: gains rule authoring CLI command group. Phase 4: gains doctor --fix, --verbose/--full CLI flags, PRAGMA config wiring. Phase 5: gains --no-gitignore flag on init, gitignore modification logic, absolutePathsDetected/nativeBinding/busyTimeout in doctor report.",
+      "allowed_imports_from": [
+        "viewer-core",
+        "viewer-config",
+        "viewer-store",
+        "viewer-indexer",
+        "viewer-retrieval",
+        "viewer-verify"
+      ],
+      "forbidden_imports_from": [
+        "viewer-bench"
+      ]
+    },
+    {
+      "module": "viewer-bench",
+      "description": "Phase 2/3: Benchmark and eval infrastructure. Dev-only. NOT a C2 writer. Imports viewer-core, viewer-indexer, viewer-store (read-only), viewer-retrieval. Phase 3: gains prompt-level eval module with optional @anthropic-ai/sdk devDependency.",
+      "allowed_imports_from": [
+        "viewer-core",
+        "viewer-indexer",
+        "viewer-store",
+        "viewer-retrieval"
+      ],
+      "forbidden_imports_from": [
+        "viewer-config",
+        "viewer-verify",
+        "viewer-surface"
+      ]
+    }
+  ]
+}

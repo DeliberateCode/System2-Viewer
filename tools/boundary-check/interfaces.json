@@ -1,0 +1,1635 @@
+{
+  "version": "0.5.0",
+  "modules": {
+    "viewer-core": {
+      "description": "Pure types, confidence/freshness scoring, claim state machine, surfacing classification. Zero external dependencies, zero workspace imports.",
+      "public_exports": [
+        {
+          "name": "computeConfidence",
+          "kind": "function",
+          "signature": "(evidence: EvidenceRef[], contradictions: EvidenceRef[], priorState: ScoredState) => ConfidenceBand"
+        },
+        {
+          "name": "computeFreshness",
+          "kind": "function",
+          "signature": "(scopedChange: ChangeSet, lastEvidenceRevision: string) => FreshnessBand"
+        },
+        {
+          "name": "nextClaimStatus",
+          "kind": "function",
+          "signature": "(claim: Claim, evidence: EvidenceRef[], contradictions: EvidenceRef[]) => ClaimStatus"
+        },
+        {
+          "name": "isSurfaceable",
+          "kind": "function",
+          "signature": "(claim: Claim) => boolean"
+        },
+        {
+          "name": "claimSurfacingClass",
+          "kind": "function",
+          "signature": "(claim: Claim) => { category: ClaimCategory; importance: Importance }"
+        },
+        {
+          "name": "importanceAtLeast",
+          "kind": "function",
+          "signature": "(b: Importance, min: Importance) => boolean"
+        },
+        {
+          "name": "stableKey",
+          "kind": "function",
+          "signature": "(kind: NodeKind, repositoryId: string, ...segments: string[]) => string"
+        },
+        {
+          "name": "TH_07_SURFACING_CUTOFF",
+          "kind": "constant",
+          "signature": "{ minConfidenceBand: ConfidenceBand; requiresNonLlmEvidence: boolean }"
+        },
+        {
+          "name": "ConfidenceBand",
+          "kind": "type",
+          "signature": "'none' | 'low' | 'medium' | 'high'"
+        },
+        {
+          "name": "FreshnessBand",
+          "kind": "type",
+          "signature": "'stale' | 'aging' | 'fresh'"
+        },
+        {
+          "name": "EvidenceKind",
+          "kind": "type",
+          "signature": "'human_annotation' | 'test_result' | 'symbol_index_hit' | 'static_analysis_result' | 'tree_sitter_query' | 'grep_hit' | 'source_span' | 'git_commit' | 'llm_derivation' | 'runtime_trace' | 'embedding_similarity' | (string & {})"
+        },
+        {
+          "name": "EvidenceRef",
+          "kind": "type",
+          "signature": "{ evidenceId: string; kind: EvidenceKind }"
+        },
+        {
+          "name": "ScoredState",
+          "kind": "type",
+          "signature": "{ confidence: ConfidenceBand; freshness: FreshnessBand }"
+        },
+        {
+          "name": "ChangeSet",
+          "kind": "type",
+          "signature": "{ touchesScope: boolean; priorFreshness: FreshnessBand; changeRevision: string }"
+        },
+        {
+          "name": "ClaimStatus",
+          "kind": "type",
+          "signature": "'hypothesis' | 'confirmed' | 'rejected' | 'contradicted' | 'stale'"
+        },
+        {
+          "name": "Claim",
+          "kind": "type",
+          "signature": "{ id: string; status: ClaimStatus; confidence: ConfidenceBand; supportingEvidence: EvidenceRef[]; contradictingEvidence: EvidenceRef[]; verificationRecipeCount: number; claimType?: string; scope?: Record<string, unknown> }"
+        },
+        {
+          "name": "ClaimCategory",
+          "kind": "type",
+          "signature": "'exported-symbol' | 'entrypoint' | 'package' | 'subsystem' | 'import' | 'invariant' | 'local-symbol' | 'other' | string"
+        },
+        {
+          "name": "Importance",
+          "kind": "type",
+          "signature": "'low' | 'medium' | 'high'"
+        },
+        {
+          "name": "EdgeKind",
+          "kind": "type",
+          "signature": "'contains' | 'defines' | 'references' | 'imports' | 'tested_by' | 'changed_with' | 'owns' | 'violates' | 'rename_candidate' | string"
+        },
+        {
+          "name": "Epistemic",
+          "kind": "type",
+          "signature": "'static' | 'inferred' | 'observed'"
+        },
+        {
+          "name": "NodeKind",
+          "kind": "type",
+          "signature": "string"
+        },
+        {
+          "name": "CapabilityClass",
+          "kind": "type",
+          "signature": "'read' | 'feedback' | 'verify' | 'index'"
+        },
+        {
+          "name": "SOURCE_WRITE_IS_UNREPRESENTABLE",
+          "kind": "constant",
+          "signature": "true"
+        },
+        {
+          "name": "deriveRepositoryId",
+          "kind": "function",
+          "signature": "deriveRepositoryId(repoRoot: string, configName?: string): string"
+        },
+        {
+          "name": "Logger",
+          "kind": "type",
+          "signature": "interface Logger { error, warn, info, debug }"
+        },
+        {
+          "name": "createLogger",
+          "kind": "function",
+          "signature": "createLogger(opts?): Logger"
+        },
+        {
+          "name": "NULL_LOGGER",
+          "kind": "constant",
+          "signature": "Logger"
+        },
+        {
+          "name": "LogLevel",
+          "kind": "type",
+          "signature": "type LogLevel = error | warn | info | debug"
+        },
+        {
+          "name": "DEFAULT_GIT_HISTORY_DEPTH",
+          "kind": "constant",
+          "signature": "number (500)"
+        }
+      ],
+      "internal_only": [
+        "evidenceStrengthRank",
+        "strongestBaseBand",
+        "distinctKinds",
+        "contradictionPenalty",
+        "freshnessPenalty",
+        "humanConfirmationBoost",
+        "llmOnlyCeilingGuard",
+        "isClearlyPublicSymbol",
+        "isPackageEntryPoint",
+        "BANDS",
+        "FRESHNESS",
+        "BAND_ORDER"
+      ]
+    },
+    "viewer-config": {
+      "description": "Configuration loading from viewer.config.json, exclude pattern merging, schema validation, defaults. Zero workspace imports. Phase 3: gains claimTypes and RuleDef.enabled. Phase 4: gains indexing.workerCount, indexing.workerMinFiles, indexing.sqlite. Phase 5: gains picomatch for glob compilation (replaces hand-rolled globToRegex), gains indexing.sqlite.busyTimeout.",
+      "public_exports": [
+        {
+          "name": "loadConfig",
+          "kind": "function",
+          "signature": "(repoRoot: string) => ViewerConfig"
+        },
+        {
+          "name": "loadConfigResult",
+          "kind": "function",
+          "signature": "(repoRoot: string) => ConfigResult"
+        },
+        {
+          "name": "buildExcludeSet",
+          "kind": "function",
+          "signature": "(config: ViewerConfig, gitignorePatterns: string[]) => ExcludeMatcher"
+        },
+        {
+          "name": "DEFAULT_GIT_HISTORY_DEPTH",
+          "kind": "constant",
+          "signature": "500"
+        },
+        {
+          "name": "DEFAULT_WORKSPACE_DEPTH",
+          "kind": "constant",
+          "signature": "8"
+        },
+        {
+          "name": "DEFAULT_WORKSPACE_MAX_REPOS",
+          "kind": "constant",
+          "signature": "256"
+        },
+        {
+          "name": "MAX_WORKSPACE_DEPTH",
+          "kind": "constant",
+          "signature": "64"
+        },
+        {
+          "name": "MAX_WORKSPACE_MAX_REPOS",
+          "kind": "constant",
+          "signature": "4096"
+        },
+        {
+          "name": "DEFAULT_SECRET_PATTERNS",
+          "kind": "constant",
+          "signature": "string[]"
+        },
+        {
+          "name": "ViewerConfig",
+          "kind": "type",
+          "signature": "{ version: 1; repository: { name?: string; exclude?: string[] }; indexing: { gitHistoryDepth: number; symbolBackend: 'treesitter' | 'lsp' | 'scip'; workspaceDepth?: number; workspaceMaxRepos?: number; embeddingModel?: string; workerCount?: number; workerMinFiles?: number; sqlite?: { pageSize?: number; cacheSize?: number; mmapSize?: number; busyTimeout?: number } }; subsystems?: Array<{ id: string; name: string; paths: string[] }>; rules?: RuleDef[]; claimTypes?: ClaimTypeDef[]; remote: { enabled: boolean } }"
+        },
+        {
+          "name": "RuleDef",
+          "kind": "type",
+          "signature": "{ name: string; type: string; from: { pathGlob: string }; to: { pathGlob: string }; severity: string; enabled?: boolean }"
+        },
+        {
+          "name": "ClaimTypeDef",
+          "kind": "type",
+          "signature": "{ id: string; displayTemplate: string; defaultVerificationRecipes?: RecipeDef[]; evidenceRequirements?: { minEvidenceCount?: number; requiredEvidenceKinds?: string[] }; severity?: string }"
+        },
+        {
+          "name": "RecipeDef",
+          "kind": "type",
+          "signature": "{ recipeType: string; description: string; command?: string }"
+        },
+        {
+          "name": "ConfigResult",
+          "kind": "type",
+          "signature": "{ config: ViewerConfig; issues: ConfigIssue[] }"
+        },
+        {
+          "name": "ConfigIssue",
+          "kind": "type",
+          "signature": "{ path: string; message: string; severity: 'error' | 'warning' }"
+        },
+        {
+          "name": "ExcludeMatcher",
+          "kind": "type",
+          "signature": "{ isExcluded(path: string): boolean }"
+        },
+        {
+          "name": "BUILT_IN_CLAIM_TYPES",
+          "kind": "constant",
+          "signature": "readonly ClaimTypeDef[]"
+        },
+        {
+          "name": "SqliteConfig",
+          "kind": "type",
+          "signature": "{ pageSize?: number; cacheSize?: number; mmapSize?: number; busyTimeout?: number }"
+        },
+        {
+          "name": "DEFAULT_SQLITE_PAGE_SIZE",
+          "kind": "constant",
+          "signature": "4096"
+        },
+        {
+          "name": "DEFAULT_SQLITE_CACHE_SIZE",
+          "kind": "constant",
+          "signature": "-64000"
+        },
+        {
+          "name": "DEFAULT_SQLITE_MMAP_SIZE",
+          "kind": "constant",
+          "signature": "268435456"
+        },
+        {
+          "name": "DEFAULT_WORKER_MIN_FILES",
+          "kind": "constant",
+          "signature": "500"
+        },
+        {
+          "name": "DEFAULT_SQLITE_BUSY_TIMEOUT",
+          "kind": "constant",
+          "signature": "5000"
+        }
+      ],
+      "internal_only": [
+        "parseConfig",
+        "validateSchema",
+        "mergeDefaults",
+        "SECRET_FILENAME_PATTERNS"
+      ]
+    },
+    "viewer-store": {
+      "description": "SQLite persistence: schema DDL, versioned migration runner, ModelStore, ReadHandle, SnapshotTxn, FTS5 helper, kind registry seed. Imports viewer-core for shared types. Phase 3: gains embeddings table, upsertEmbedding, semanticSearch, embeddingCoverage. Phase 4: gains file_hashes table, schema_migrations table, upsertFileHash, loadFileHashes, getMigrationStatus, configurable PRAGMAs. Phase 5: gains busy_timeout PRAGMA (configurable via SqlitePragmaOpts.busyTimeout), deleteFtsForFile on SnapshotTxn for incremental FTS updates.",
+      "public_exports": [
+        {
+          "name": "ModelStore",
+          "kind": "class",
+          "signature": "{ static open(dataDir: string): ModelStore; beginSnapshot(rev: RevisionId): SnapshotTxn; read(rev?: RevisionId): ReadHandle; readAt(rev: RevisionId): ReadHandle; close(): void }"
+        },
+        {
+          "name": "SCHEMA_DDL",
+          "kind": "constant",
+          "signature": "string"
+        },
+        {
+          "name": "REVISION_SCOPED_TABLES",
+          "kind": "constant",
+          "signature": "readonly string[]"
+        },
+        {
+          "name": "ReadHandle",
+          "kind": "type",
+          "signature": "{ neighbors(id: string, kind?: string, maxDepth?: number): NeighborEdge[]; ftsSearch(q: string): FtsHit[]; getNode(id: string): Record<string, unknown> | null; getClaim(id: string): ClaimReadRow | null; listOpenClaims(generationId?: string): ClaimReadRow[]; getEvidence(id: string): EvidenceReadRow | null; partiality(rev: RevisionId): PartialityRow[]; verificationHistory(claimId: string): VerificationHistoryRow[]; semanticSearch(queryVector: Buffer, limit?: number): SimilarityHit[]; embeddingCoverage(): { totalNodes: number; embeddedNodes: number }; loadFileHashes(): Map<string, string>; close(): void }"
+        },
+        {
+          "name": "SnapshotTxn",
+          "kind": "type",
+          "signature": "{ upsertNode(row: NodeRow): void; upsertEdge(row: EdgeRow): void; appendEvidence(row: EvidenceRow): void; versionClaim(row: ClaimRow): void; appendVerificationHistory(row: VerificationHistoryRow): void; promoteRule(row: RuleRow): void; closeInterval(id: string, revision: string): void; upsertEmbedding(row: EmbeddingRow): void; upsertFileHash(row: FileHashRow): void; deleteFtsForFile(filePath: string): void; commit(): void; abort(): void }"
+        },
+        {
+          "name": "RevisionId",
+          "kind": "type",
+          "signature": "string"
+        },
+        {
+          "name": "NeighborEdge",
+          "kind": "type",
+          "signature": "{ id: string; kind: string; fromNodeId: string; toNodeId: string; depth: number }"
+        },
+        {
+          "name": "ClaimReadRow",
+          "kind": "type",
+          "signature": "{ id: string; claimType: string; statement: string; status: string; confidenceBand: string; freshnessBand: string; validFromRevision: string; validToRevision: string | null; scopeJson: string; supportingEvidenceIds: string[] }"
+        },
+        {
+          "name": "EvidenceReadRow",
+          "kind": "type",
+          "signature": "{ id: string; kind: string; contentHash: string | null; revision: string; path: string | null }"
+        },
+        {
+          "name": "PartialityRow",
+          "kind": "type",
+          "signature": "{ id: string; revision: string; scope: string; extractedJson: string | null; failedJson: string | null; skippedJson: string | null }"
+        },
+        {
+          "name": "PartialityWriteRow",
+          "kind": "type",
+          "signature": "{ id: string; revision: string; scope: string; extractedJson: string | null; failedJson: string | null; skippedJson: string | null; createdAt: string }"
+        },
+        {
+          "name": "VerificationHistoryRow",
+          "kind": "type",
+          "signature": "{ id: string; claimId: string; recipesJson: string; priorConfidence: string | null; newConfidence: string | null; priorFreshness: string | null; newFreshness: string | null; priorStatus: string | null; newStatus: string | null; unresolvedReason: string | null; ranAt: string }"
+        },
+        {
+          "name": "FtsHit",
+          "kind": "type",
+          "signature": "{ objectId: string; objectType: string; text: string; path: string | null; rank: number }"
+        },
+        {
+          "name": "SimilarityHit",
+          "kind": "type",
+          "signature": "{ nodeId: string; score: number }"
+        },
+        {
+          "name": "EmbeddingRow",
+          "kind": "type",
+          "signature": "{ nodeId: string; modelName: string; dimension: number; vector: Buffer; createdAt: string }"
+        },
+        {
+          "name": "FileHashRow",
+          "kind": "type",
+          "signature": "{ filePath: string; sha256Hash: string; revision: string; recordedAt: string }"
+        },
+        {
+          "name": "MigrationStatus",
+          "kind": "type",
+          "signature": "{ current: number; latest: number; pending: number; applied: Array<{ version: number; name: string; applied_at: string }> }"
+        },
+        {
+          "name": "getMigrationStatus",
+          "kind": "function",
+          "signature": "(db: Database) => MigrationStatus"
+        },
+        {
+          "name": "NodeRow",
+          "kind": "type"
+        },
+        {
+          "name": "EdgeRow",
+          "kind": "type"
+        },
+        {
+          "name": "EvidenceRow",
+          "kind": "type"
+        },
+        {
+          "name": "ClaimRow",
+          "kind": "type"
+        },
+        {
+          "name": "RuleRow",
+          "kind": "type"
+        },
+        {
+          "name": "RevisionRow",
+          "kind": "type",
+          "signature": "interface RevisionRow { id: string; repositoryId: string; kind: string; parentId: string | null; committedAt: string | null; indexedAt: string; historyBounded: number }"
+        },
+        {
+          "name": "FtsTextRow",
+          "kind": "type",
+          "signature": "interface FtsTextRow { objectId: string; objectType: string; text: string; path: string }"
+        },
+        {
+          "name": "SqlitePragmaOpts",
+          "kind": "type",
+          "signature": "{ pageSize?: number; cacheSize?: number; mmapSize?: number; busyTimeout?: number }"
+        }
+      ],
+      "internal_only": [
+        "ReadHandleImpl",
+        "SnapshotTxnImpl",
+        "initializeSchema",
+        "migrate",
+        "ftsSearch",
+        "kindRegistrySeed",
+        "vecDot",
+        "vecNorm",
+        "cosineSimilarity"
+      ]
+    },
+    "viewer-indexer": {
+      "description": "File discovery, tree-sitter extraction (TS, JSON, Python, Rust, Go, Java), TS language service adapter, import resolution, git history mining, subsystem inference, claim generation, partiality tracking. Phase 3: gains embedding computation via optional ONNX Runtime. Phase 4: gains worker-thread pool, incremental re-indexing, global symbol map, secret scrubbing, grammar checksums, verbose progress. Phase 5: gains Java visitor, picomatch for subsystem glob matching, comprehensive metadata scrubbing, path relativization, batch writer, incremental FTS, rename detection. Imports viewer-core, viewer-store.",
+      "public_exports": [
+        {
+          "name": "Indexer",
+          "kind": "class",
+          "signature": "{ index(input: { repoRoot: string; depth?: number; workspace?: 'auto' | 'force' | 'off'; workspaceDepth?: number; workspaceMaxRepos?: number; skipEmbed?: boolean }): Promise<{ revision: string }> }"
+        },
+        {
+          "name": "inferDefaultLayerRules",
+          "kind": "function",
+          "signature": "(packages: PackageMetadata[], observedImports: ObservedImport[]) => InferredLayerRuleCandidate[]"
+        },
+        {
+          "name": "selectSymbolBackend",
+          "kind": "function",
+          "signature": "(configured: string) => { backend: string; degraded: boolean; reason?: string }"
+        },
+        {
+          "name": "probeEmbedderStatus",
+          "kind": "function",
+          "signature": "() => EmbedderStatus"
+        },
+        {
+          "name": "InferredLayerRuleCandidate",
+          "kind": "type",
+          "signature": "{ name: string; type: string; from: { pathGlob: string }; to: { pathGlob: string }; severity: string; evidenceIds: string[]; knownExceptions: string[] }"
+        },
+        {
+          "name": "EmbedderStatus",
+          "kind": "type",
+          "signature": "{ status: 'available' | 'not_installed' | 'load_failed'; modelName?: string; dimension?: number; modelSizeBytes?: number; error?: string }"
+        },
+        {
+          "name": "tryLoadEmbedder",
+          "kind": "function",
+          "signature": "() => Embedder | null"
+        },
+        {
+          "name": "Embedder",
+          "kind": "type",
+          "signature": "{ embed(texts: string[]): Promise<Float32Array[]>; modelName: string; dimension: number }"
+        },
+        {
+          "name": "hasTraversalSegment",
+          "kind": "function",
+          "signature": "hasTraversalSegment(path: string): boolean"
+        },
+        {
+          "name": "scrubSecrets",
+          "kind": "function",
+          "signature": "(content: string) => ScrubResult"
+        },
+        {
+          "name": "shannonEntropy",
+          "kind": "function",
+          "signature": "(s: string) => number"
+        },
+        {
+          "name": "ScrubResult",
+          "kind": "type",
+          "signature": "{ scrubbed: string; redactionCount: number }"
+        },
+        {
+          "name": "ProgressReporter",
+          "kind": "type",
+          "signature": "{ stage(number: number, total: number, name: string, count: number, unit: string, elapsedMs: number, extra?: string): void }"
+        },
+        {
+          "name": "StderrProgressReporter",
+          "kind": "class",
+          "signature": "implements ProgressReporter"
+        },
+        {
+          "name": "NullProgressReporter",
+          "kind": "class",
+          "signature": "implements ProgressReporter"
+        },
+        {
+          "name": "GlobalSymbolMap",
+          "kind": "class",
+          "signature": "{ add(entry: GlobalSymbolEntry): void; lookupByName(name: string): GlobalSymbolEntry[]; lookupByQualified(filePath: string, name: string): GlobalSymbolEntry | undefined; lookupByFile(filePath: string): GlobalSymbolEntry[] }"
+        },
+        {
+          "name": "GlobalSymbolEntry",
+          "kind": "type",
+          "signature": "{ nodeId: string; filePath: string; symbolName: string; exported: boolean; language: string }"
+        },
+        {
+          "name": "GRAMMAR_CHECKSUMS",
+          "kind": "constant",
+          "signature": "Record<string, string>"
+        },
+        {
+          "name": "getPatternCount",
+          "kind": "function",
+          "signature": "() => number"
+        },
+        {
+          "name": "hashFileContent",
+          "kind": "function",
+          "signature": "(content: string) => string"
+        },
+        {
+          "name": "computeIncrementalDiff",
+          "kind": "function",
+          "signature": "(currentFiles: Map<string, string>, storedHashes: Map<string, string>) => IncrementalDiff"
+        },
+        {
+          "name": "IncrementalDiff",
+          "kind": "type",
+          "signature": "{ unchanged: string[]; changed: string[]; added: string[]; removed: string[] }"
+        },
+        {
+          "name": "WorkerPool",
+          "kind": "class",
+          "signature": "{ constructor(poolSize: number); runAll(tasks: ExtractionTask[]): Promise<Array<WorkerExtractionResult | WorkerExtractionError>>; shutdown(): Promise<void> }"
+        },
+        {
+          "name": "resolveWorkerPoolConfig",
+          "kind": "function",
+          "signature": "(config?: Partial<WorkerPoolConfig>) => WorkerPoolConfig"
+        },
+        {
+          "name": "WorkerPoolConfig",
+          "kind": "type",
+          "signature": "{ workerCount: number; workerMinFiles: number }"
+        },
+        {
+          "name": "ExtractionTask",
+          "kind": "type",
+          "signature": "{ filePath: string; content: string; language?: string }"
+        },
+        {
+          "name": "WorkerExtractionResult",
+          "kind": "type",
+          "signature": "{ filePath: string; symbols: SymbolInfo[]; imports: ImportInfo[]; partial: boolean; partialReason?: string }"
+        },
+        {
+          "name": "WorkerExtractionError",
+          "kind": "type",
+          "signature": "{ filePath: string; error: string }"
+        },
+        {
+          "name": "verifyGrammarChecksum",
+          "kind": "function",
+          "signature": "(wasmFileName: string) => GrammarChecksumResult"
+        },
+        {
+          "name": "grammarPackageForWasm",
+          "kind": "function",
+          "signature": "(wasmFileName: string) => string | undefined"
+        },
+        {
+          "name": "GrammarChecksumResult",
+          "kind": "type",
+          "signature": "{ valid: boolean; expected?: string; actual?: string }"
+        },
+        {
+          "name": "detectRenames",
+          "kind": "function",
+          "signature": "detectRenames(removed: string[], added: string[], fileHashes: Map<string, string>): RenameCandidate[]"
+        },
+        {
+          "name": "pathSimilarity",
+          "kind": "function",
+          "signature": "pathSimilarity(a: string, b: string): number"
+        },
+        {
+          "name": "RenameCandidate",
+          "kind": "type",
+          "signature": "interface RenameCandidate { oldPath: string; newPath: string; confidence: number }"
+        },
+        {
+          "name": "computeStatDiff",
+          "kind": "function",
+          "signature": "computeStatDiff(current: WalkEntry[], stored: Map<string, StatFingerprint>): IncrementalDiff"
+        },
+        {
+          "name": "StatFingerprint",
+          "kind": "type",
+          "signature": "interface StatFingerprint { mtimeMs: number; size: number }"
+        },
+        {
+          "name": "JsonProgressReporter",
+          "kind": "class",
+          "signature": "class JsonProgressReporter implements ProgressReporter"
+        }
+      ],
+      "internal_only": [
+        "walkFiles",
+        "extractSymbols",
+        "resolveImports",
+        "mineGitHistory",
+        "inferSubsystems",
+        "generateClaims",
+        "TreeSitterAdapter",
+        "TsLanguageServiceAdapter",
+        "classifyFile",
+        "detectRootMarker",
+        "buildExcludeSet",
+        "GrammarRegistry",
+        "visitPython",
+        "visitRust",
+        "visitGo",
+        "visitJava",
+        "visitTypeScript",
+        "visitJson",
+        "detectLanguage",
+        "loadGrammar",
+        "looksLikeWorkspace",
+        "discoverWorkspace",
+        "composeEmbeddingText",
+        "ExtractionWorker",
+        "KNOWN_PATTERNS",
+        "BatchWriter",
+        "detectRenames",
+        "SubsystemEdgeAccumulator",
+        "subsystemOwnsFile"
+      ]
+    },
+    "viewer-retrieval": {
+      "description": "9 structured query operations, ResultEnvelope construction, retrieval pipeline. Imports viewer-core ONLY; never viewer-store. Defines structural ReadHandle interfaces satisfied by viewer-store at composition root. Phase 3: PipelineReadHandle gains optional semanticSearch; RetrievalQuery gains queryEmbedding. Phase 5: ResultEnvelope gains optional extractionQuality field; buildEnvelope computes extraction quality from partiality; suggestedNextCalls become result-dependent (dynamic suggestions).",
+      "public_exports": [
+        {
+          "name": "getRepositoryOverview",
+          "kind": "function",
+          "signature": "(handle: ReadView, repoNodeId: string, opts?: { revision?: string; maxDepth?: number }) => ResultEnvelope<RepositoryOverview>"
+        },
+        {
+          "name": "findEntrypoints",
+          "kind": "function",
+          "signature": "(handle: EntrypointReadHandle, query: string, opts?: { revision?: string; limit?: number; queryEmbedding?: Float32Array }) => ResultEnvelope<EntrypointResult>"
+        },
+        {
+          "name": "traceFlow",
+          "kind": "function",
+          "signature": "(handle: FlowReadHandle, start: string, targetOrIntent: string, opts?: { revision?: string; maxDepth?: number; prefer?: 'tests' | 'docs' }) => ResultEnvelope<FlowTrace>"
+        },
+        {
+          "name": "explainSubsystem",
+          "kind": "function",
+          "signature": "(handle: SubsystemReadHandle, subsystemId: string, opts?: { revision?: string }) => ResultEnvelope<SubsystemExplanation>"
+        },
+        {
+          "name": "estimateBlastRadius",
+          "kind": "function",
+          "signature": "(handle: BlastReadHandle, changeScope: string[], opts?: { revision?: string; maxDepth?: number }) => ResultEnvelope<BlastRadiusReport>"
+        },
+        {
+          "name": "listClaims",
+          "kind": "function",
+          "signature": "(handle: ListClaimsReadHandle, opts?: { claimType?: string; status?: string; includeLowValue?: boolean; publicApiOnly?: boolean }) => ResultEnvelope<ClaimSummary[]>"
+        },
+        {
+          "name": "listUncertainties",
+          "kind": "function",
+          "signature": "(handle: ListUncertaintiesReadHandle, opts?: { minSeverity?: string; includeDiagnostic?: boolean; scope?: ScopeFilter }) => ResultEnvelope<UncertaintyItem[]>"
+        },
+        {
+          "name": "runRetrievalPipeline",
+          "kind": "function",
+          "signature": "(handle: PipelineReadHandle, query: RetrievalQuery) => RetrievalResult"
+        },
+        {
+          "name": "buildEnvelope",
+          "kind": "function",
+          "signature": "<T>(input: EnvelopeInput<T>) => ResultEnvelope<T>"
+        },
+        {
+          "name": "assertStructured",
+          "kind": "function",
+          "signature": "<T>(value: unknown) => asserts value is ResultEnvelope<T>"
+        },
+        {
+          "name": "buildClaimPayload",
+          "kind": "function",
+          "signature": "(handle: ClaimPayloadReadHandle, claimId: string) => ClaimPayload | null"
+        },
+        {
+          "name": "sampleEvidenceAgreement",
+          "kind": "function",
+          "signature": "(handle: EvidenceAgreementReadHandle, sampleSize: number) => EvidenceAgreementAudit"
+        },
+        {
+          "name": "PIPELINE_STAGES",
+          "kind": "constant",
+          "signature": "readonly string[]"
+        },
+        {
+          "name": "ResultEnvelope",
+          "kind": "type",
+          "signature": "{ query: StructuredQuery; data: T; evidence: EvidenceRef[]; uncertainties: UncertaintyItem[]; partiality?: PartialitySummaryRef; suggestedNextCalls: SuggestedCall[]; modelRevision: string; extractionQuality?: ExtractionQuality }"
+        },
+        {
+          "name": "ExtractionQuality",
+          "kind": "type",
+          "signature": "{ fullAst: boolean; languages: Record<string, 'ast' | 'regex' | 'file-only'> }"
+        },
+        {
+          "name": "StructuredQuery",
+          "kind": "type",
+          "signature": "{ op: string; args: Record<string, unknown> }"
+        },
+        {
+          "name": "EvidenceRef",
+          "kind": "type",
+          "signature": "{ evidenceId: string; kind: string; path: string | null; revision: string; extractor: string }"
+        },
+        {
+          "name": "UncertaintyItem",
+          "kind": "type",
+          "signature": "{ id: string; kind: string; severity: 'low' | 'medium' | 'high'; description: string; relatedClaimIds: string[]; relatedNodeIds: string[]; recommendedAction: string }"
+        },
+        {
+          "name": "SuggestedCall",
+          "kind": "type",
+          "signature": "{ op: string; args: Record<string, unknown>; reason: string }"
+        },
+        {
+          "name": "PartialitySummaryRef",
+          "kind": "type",
+          "signature": "{ ref: string; scopes: { id: string; scope: string }[] }"
+        },
+        {
+          "name": "RepositoryOverview",
+          "kind": "type"
+        },
+        {
+          "name": "EntrypointResult",
+          "kind": "type"
+        },
+        {
+          "name": "FlowTrace",
+          "kind": "type"
+        },
+        {
+          "name": "SubsystemExplanation",
+          "kind": "type"
+        },
+        {
+          "name": "BlastRadiusReport",
+          "kind": "type"
+        },
+        {
+          "name": "ClaimSummary",
+          "kind": "type"
+        },
+        {
+          "name": "ClaimSummaryRef",
+          "kind": "type"
+        },
+        {
+          "name": "SubsystemRef",
+          "kind": "type"
+        },
+        {
+          "name": "RetrievalQuery",
+          "kind": "type",
+          "signature": "{ text?: string; nodeIds?: string[]; revision?: string; maxDepth?: number; queryEmbedding?: Float32Array; semanticLimit?: number }"
+        },
+        {
+          "name": "RetrievalResult",
+          "kind": "type"
+        },
+        {
+          "name": "RetrievalAnchor",
+          "kind": "type"
+        },
+        {
+          "name": "ClaimPayload",
+          "kind": "type"
+        },
+        {
+          "name": "EvidenceAgreementSample",
+          "kind": "type"
+        },
+        {
+          "name": "EvidenceAgreementAudit",
+          "kind": "type"
+        },
+        {
+          "name": "ScopeFilter",
+          "kind": "type"
+        },
+        {
+          "name": "EnvelopeInput",
+          "kind": "type"
+        },
+        {
+          "name": "PipelineReadHandle",
+          "kind": "type",
+          "signature": "{ neighbors(id: string, kind?: string, maxDepth?: number): NeighborEdge[]; ftsSearch(q: string): FtsHit[]; getNode(id: string): Record<string, unknown> | null; getClaim(id: string): ClaimReadRow | null; partiality(rev: string): PartialityRow[]; semanticSearch?(queryVector: Float32Array, limit?: number): SimilarityHit[] }"
+        },
+        {
+          "name": "SimilarityHit",
+          "kind": "type",
+          "signature": "{ nodeId: string; score: number }"
+        },
+        {
+          "name": "ReadView",
+          "kind": "type"
+        },
+        {
+          "name": "EntrypointReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "FlowReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "SubsystemReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "BlastReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "ListClaimsReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "ListUncertaintiesReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "ClaimPayloadReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "EvidenceAgreementReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "NeighborEdge",
+          "kind": "type"
+        },
+        {
+          "name": "FtsHit",
+          "kind": "type"
+        },
+        {
+          "name": "ClaimReadRow",
+          "kind": "type"
+        },
+        {
+          "name": "PartialityRow",
+          "kind": "type"
+        }
+      ],
+      "internal_only": [
+        "rankCandidates",
+        "mergAnchors",
+        "runSemanticStage"
+      ]
+    },
+    "viewer-verify": {
+      "description": "Verification engine, verification recipes, re-scoring, rules engine (explicit vs inferred), on-demand claim generation. Imports viewer-core, viewer-retrieval.",
+      "public_exports": [
+        {
+          "name": "VerificationEngine",
+          "kind": "class",
+          "signature": "{ verifyClaim(claimId: string, modelHandle: VerificationModelHandle, writeTxn: VerificationWriteTxn, options?: { strategy?: 'all' | 'cheapest' }): VerificationResult }"
+        },
+        {
+          "name": "RulesEngine",
+          "kind": "class",
+          "signature": "{ constructor(explicitRules: EnforceableRule[], inferredCandidates: InferredCandidateRule[]); checkInvariants(handle: RulesReadHandle, options?: { scope?: ScopeFilter }): InvariantCheckResult; surfaceInferredCandidates(): InferredCandidateClaim[] }"
+        },
+        {
+          "name": "checkInvariants",
+          "kind": "function",
+          "signature": "(engine: RulesEngine, handle: RulesReadHandle, options?: { scope?: ScopeFilter; txn?: RuleWriteTxn }) => ResultEnvelope<InvariantCheckResult>"
+        },
+        {
+          "name": "loadExplicitRules",
+          "kind": "function",
+          "signature": "(repositoryId: string, defs: RuleDefinition[]) => EnforceableRule[]"
+        },
+        {
+          "name": "makeInferredCandidate",
+          "kind": "function",
+          "signature": "(repositoryId: string, def: RuleDefinition, evidenceIds: string[], knownExceptions: string[]) => InferredCandidateRule"
+        },
+        {
+          "name": "matchForbiddenImport",
+          "kind": "function",
+          "signature": "(rule: EnforceableRule, fromPath: string, toPath: string) => boolean"
+        },
+        {
+          "name": "neverAutoEnforceGuard",
+          "kind": "function",
+          "signature": "(rule: unknown) => asserts rule is EnforceableRule"
+        },
+        {
+          "name": "runRecipe",
+          "kind": "function",
+          "signature": "(recipe: VerificationRecipe, handle: VerificationReadHandle) => RecipeOutcome"
+        },
+        {
+          "name": "isMvpRecipe",
+          "kind": "function",
+          "signature": "(recipe: VerificationRecipe) => boolean"
+        },
+        {
+          "name": "rescoreFromEvidence",
+          "kind": "function",
+          "signature": "(input: RescoreInput) => RescoreResult"
+        },
+        {
+          "name": "generateOnDemandClaims",
+          "kind": "function",
+          "signature": "(handle: OnDemandReadHandle, query: OnDemandQuery) => OnDemandClaimsResult"
+        },
+        {
+          "name": "persistOnDemandClaims",
+          "kind": "function",
+          "signature": "(result: OnDemandClaimsResult, txn: OnDemandWriteTxn) => void"
+        },
+        {
+          "name": "NON_EAGER_CLAIM_TYPES",
+          "kind": "constant",
+          "signature": "readonly string[]"
+        },
+        {
+          "name": "EnforceableRule",
+          "kind": "type"
+        },
+        {
+          "name": "InferredCandidateRule",
+          "kind": "type"
+        },
+        {
+          "name": "RejectedRule",
+          "kind": "type"
+        },
+        {
+          "name": "Rule",
+          "kind": "type"
+        },
+        {
+          "name": "RuleDefinition",
+          "kind": "type"
+        },
+        {
+          "name": "RuleType",
+          "kind": "type"
+        },
+        {
+          "name": "RuleStatus",
+          "kind": "type"
+        },
+        {
+          "name": "RuleSource",
+          "kind": "type"
+        },
+        {
+          "name": "ScopeFilter",
+          "kind": "type"
+        },
+        {
+          "name": "InvariantCheckResult",
+          "kind": "type"
+        },
+        {
+          "name": "RuleViolation",
+          "kind": "type"
+        },
+        {
+          "name": "InferredCandidateClaim",
+          "kind": "type"
+        },
+        {
+          "name": "VerificationResult",
+          "kind": "type"
+        },
+        {
+          "name": "VerificationRecipe",
+          "kind": "type"
+        },
+        {
+          "name": "VerificationModelHandle",
+          "kind": "type"
+        },
+        {
+          "name": "VerificationWriteTxn",
+          "kind": "type"
+        },
+        {
+          "name": "VerificationReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "RulesReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "RuleWriteTxn",
+          "kind": "type"
+        },
+        {
+          "name": "ModelImportEdge",
+          "kind": "type"
+        },
+        {
+          "name": "RescoreInput",
+          "kind": "type"
+        },
+        {
+          "name": "RescoreResult",
+          "kind": "type"
+        },
+        {
+          "name": "RecipeOutcome",
+          "kind": "type"
+        },
+        {
+          "name": "RecipeEvidence",
+          "kind": "type"
+        },
+        {
+          "name": "SourceSpanRef",
+          "kind": "type"
+        },
+        {
+          "name": "OnDemandReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "OnDemandWriteTxn",
+          "kind": "type"
+        },
+        {
+          "name": "OnDemandQuery",
+          "kind": "type"
+        },
+        {
+          "name": "OnDemandClaimsResult",
+          "kind": "type"
+        }
+      ],
+      "internal_only": [
+        "assertEnforceable",
+        "RuleEvidenceRef"
+      ]
+    },
+    "viewer-surface": {
+      "description": "Composition root (createViewerEngine), MCP server (McpToolServer), CLI (runCli), feedback operations, reference resolver, revision comparison, doctor/init/status, capability classes, rule authoring. Imports all packages. Phase 3: gains rule authoring CLI commands. Phase 4: gains doctor --fix, --verbose/--full CLI flags, PRAGMA config wiring. Phase 5: gains --no-gitignore flag on init, gitignore modification logic, absolutePathsDetected/nativeBinding/busyTimeout in doctor report.",
+      "public_exports": [
+        {
+          "name": "createViewerEngine",
+          "kind": "function",
+          "signature": "(opts?: { dataDir?: string }) => ViewerEngine"
+        },
+        {
+          "name": "McpToolServer",
+          "kind": "class",
+          "signature": "{ register(ops: ViewerOperations, feedback: FeedbackOperations, indexer: IndexerLike): void; start(): Promise<void>; toolPartition(): ToolDescriptor[]; invoke(name: string, args: Record<string, unknown>): Promise<ResultEnvelope<unknown>> }"
+        },
+        {
+          "name": "runCli",
+          "kind": "function",
+          "signature": "(argv: string[], ops: CliOps, out?: (line: string) => void) => Promise<number>"
+        },
+        {
+          "name": "formatView",
+          "kind": "function",
+          "signature": "(view: DerivedView) => string"
+        },
+        {
+          "name": "createFeedbackOperations",
+          "kind": "function",
+          "signature": "(readHandle: FeedbackReadHandle, writeTxn: FeedbackWriteTxn) => FeedbackOperations"
+        },
+        {
+          "name": "noProseEditGuard",
+          "kind": "function",
+          "signature": "(args: Record<string, unknown>) => void"
+        },
+        {
+          "name": "capabilityClassOf",
+          "kind": "function",
+          "signature": "(toolName: string) => CapabilityClass"
+        },
+        {
+          "name": "describeTool",
+          "kind": "function",
+          "signature": "(name: string) => ToolDescriptor"
+        },
+        {
+          "name": "allToolDescriptors",
+          "kind": "function",
+          "signature": "() => ToolDescriptor[]"
+        },
+        {
+          "name": "validateUntrustedInput",
+          "kind": "function",
+          "signature": "(value: unknown, path?: string) => void"
+        },
+        {
+          "name": "runInit",
+          "kind": "function",
+          "signature": "(repoRoot: string, opts?: { force?: boolean; noGitignore?: boolean }) => InitResult"
+        },
+        {
+          "name": "buildDoctorReport",
+          "kind": "function",
+          "signature": "(opts: DoctorOpts) => DoctorReport"
+        },
+        {
+          "name": "looksLikeSecretValue",
+          "kind": "function",
+          "signature": "(value: string) => boolean"
+        },
+        {
+          "name": "redactConfigValues",
+          "kind": "function",
+          "signature": "(config: Record<string, unknown>) => Record<string, unknown>"
+        },
+        {
+          "name": "REDACTED",
+          "kind": "constant",
+          "signature": "'[REDACTED]'"
+        },
+        {
+          "name": "SOURCE_WRITE_IS_UNREPRESENTABLE",
+          "kind": "constant",
+          "signature": "true"
+        },
+        {
+          "name": "CAPABILITY_CLASSES",
+          "kind": "constant",
+          "signature": "readonly CapabilityClass[]"
+        },
+        {
+          "name": "ViewerEngine",
+          "kind": "type"
+        },
+        {
+          "name": "ViewerOperations",
+          "kind": "type"
+        },
+        {
+          "name": "FeedbackOperations",
+          "kind": "type"
+        },
+        {
+          "name": "CapabilityClass",
+          "kind": "type",
+          "signature": "'read' | 'feedback' | 'verify' | 'index'"
+        },
+        {
+          "name": "ToolDescriptor",
+          "kind": "type",
+          "signature": "{ name: string; capability: CapabilityClass; mutatesModel: boolean }"
+        },
+        {
+          "name": "CliOps",
+          "kind": "type"
+        },
+        {
+          "name": "DerivedView",
+          "kind": "type"
+        },
+        {
+          "name": "ViewLine",
+          "kind": "type"
+        },
+        {
+          "name": "IndexerLike",
+          "kind": "type"
+        },
+        {
+          "name": "WorkspaceMode",
+          "kind": "type",
+          "signature": "'auto' | 'force' | 'off'"
+        },
+        {
+          "name": "InitResult",
+          "kind": "type"
+        },
+        {
+          "name": "DoctorReport",
+          "kind": "type"
+        },
+        {
+          "name": "NoModelIndexedError",
+          "kind": "class"
+        },
+        {
+          "name": "ReferenceResolver",
+          "kind": "class"
+        },
+        {
+          "name": "ResolveResult",
+          "kind": "type"
+        },
+        {
+          "name": "ReferenceKind",
+          "kind": "type"
+        },
+        {
+          "name": "CompareRevisionsResult",
+          "kind": "type"
+        },
+        {
+          "name": "FeedbackReadHandle",
+          "kind": "type"
+        },
+        {
+          "name": "FeedbackWriteTxn",
+          "kind": "type"
+        },
+        {
+          "name": "FeedbackClaimRecord",
+          "kind": "type"
+        },
+        {
+          "name": "generateMcpConfig",
+          "kind": "function"
+        },
+        {
+          "name": "McpConfigResult",
+          "kind": "type"
+        },
+        {
+          "name": "StatusReport",
+          "kind": "type"
+        },
+        {
+          "name": "RuleAuthoringOps",
+          "kind": "type",
+          "signature": "{ add(opts: RuleAddOpts): RuleAuthoringResult; list(opts: RuleListOpts): RuleListResult; remove(opts: RuleRemoveOpts): RuleAuthoringResult; test(opts: RuleTestOpts): RuleTestResult; enable(opts: RuleToggleOpts): RuleAuthoringResult; disable(opts: RuleToggleOpts): RuleAuthoringResult; export(): RuleDef[]; import(opts: RuleImportOpts): RuleImportResult }"
+        },
+        {
+          "name": "RuleAuthoringResult",
+          "kind": "type"
+        },
+        {
+          "name": "RuleListResult",
+          "kind": "type"
+        },
+        {
+          "name": "RuleTestResult",
+          "kind": "type"
+        },
+        {
+          "name": "RuleImportResult",
+          "kind": "type"
+        },
+        {
+          "name": "RuleExportResult",
+          "kind": "type"
+        },
+        {
+          "name": "atomicConfigWrite",
+          "kind": "function",
+          "signature": "(configPath: string, updater: (config: Record<string, unknown>) => void) => void"
+        },
+        {
+          "name": "appendAuditEntry",
+          "kind": "function",
+          "signature": "(auditPath: string, entry: AuditEntry) => void"
+        },
+        {
+          "name": "addRule",
+          "kind": "function",
+          "signature": "(opts: RuleAddOpts) => RuleAuthoringResult"
+        },
+        {
+          "name": "removeRule",
+          "kind": "function",
+          "signature": "(opts: RuleRemoveOpts) => RuleAuthoringResult"
+        },
+        {
+          "name": "listRules",
+          "kind": "function",
+          "signature": "(opts: RuleListOpts) => RuleListResult"
+        },
+        {
+          "name": "testRule",
+          "kind": "function",
+          "signature": "(opts: RuleTestOpts) => RuleTestResult"
+        },
+        {
+          "name": "enableRule",
+          "kind": "function",
+          "signature": "(opts: RuleToggleOpts) => RuleAuthoringResult"
+        },
+        {
+          "name": "disableRule",
+          "kind": "function",
+          "signature": "(opts: RuleToggleOpts) => RuleAuthoringResult"
+        },
+        {
+          "name": "exportRules",
+          "kind": "function",
+          "signature": "(opts: RuleExportOpts) => RuleExportResult"
+        },
+        {
+          "name": "importRules",
+          "kind": "function",
+          "signature": "(opts: RuleImportOpts) => RuleImportResult"
+        },
+        {
+          "name": "RuleAddOpts",
+          "kind": "type"
+        },
+        {
+          "name": "RuleRemoveOpts",
+          "kind": "type"
+        },
+        {
+          "name": "RuleTestOpts",
+          "kind": "type"
+        },
+        {
+          "name": "RuleToggleOpts",
+          "kind": "type"
+        },
+        {
+          "name": "RuleImportOpts",
+          "kind": "type"
+        },
+        {
+          "name": "RuleExportOpts",
+          "kind": "type"
+        },
+        {
+          "name": "AuditEntry",
+          "kind": "type"
+        },
+        {
+          "name": "DoctorSuggestion",
+          "kind": "type",
+          "signature": "{ issue: string; command: string; severity: string }"
+        },
+        {
+          "name": "runDoctorFix",
+          "kind": "function",
+          "signature": "(suggestions: DoctorSuggestion[], opts?: DoctorFixOpts) => Promise<DoctorFixResult>"
+        },
+        {
+          "name": "DoctorFixResult",
+          "kind": "type",
+          "signature": "{ attempted: number; succeeded: number; failed: number; skipped: number }"
+        },
+        {
+          "name": "RenameCandidate",
+          "kind": "type",
+          "signature": "interface RenameCandidate { oldPath: string; newPath: string; confidence: number }"
+        },
+        {
+          "name": "CreateCustomClaimInput",
+          "kind": "type",
+          "signature": "interface CreateCustomClaimInput"
+        },
+        {
+          "name": "CreateCustomClaimResult",
+          "kind": "type",
+          "signature": "interface CreateCustomClaimResult"
+        }
+      ],
+      "internal_only": [
+        "UnionHandle",
+        "bindHandle",
+        "resolveRepoRootAbs",
+        "deriveBackendCoverage",
+        "resolvePreDispatch",
+        "renderView",
+        "viewKindForOp",
+        "ViewKind",
+        "COMMANDS",
+        "RESOLVABLE",
+        "TOOL_TABLE",
+        "feedbackEnvelope",
+        "WriteTxnAdapter",
+        "CompareReadHandle",
+        "ResolverReadHandle",
+        "ResolvedNode"
+      ]
+    },
+    "viewer-bench": {
+      "description": "Phase 2/3: Benchmark and eval infrastructure. Indexing throughput, symbol coverage evaluation, backend comparison, behavioral evals for viewer-scout, prompt-level evals (Phase 3). Dev-only, internal API, NOT a C2 writer.",
+      "public_exports": [
+        {
+          "name": "runBenchmark",
+          "kind": "function",
+          "signature": "(config: BenchmarkConfig) => Promise<BenchmarkResult>"
+        },
+        {
+          "name": "evaluateCoverage",
+          "kind": "function",
+          "signature": "(fixtures: GoldenFixture[], extractFn: ExtractionFn) => Promise<CoverageResult>"
+        },
+        {
+          "name": "generateFixture",
+          "kind": "function",
+          "signature": "(config: FixtureConfig) => string"
+        },
+        {
+          "name": "writeReport",
+          "kind": "function"
+        },
+        {
+          "name": "formatReport",
+          "kind": "function"
+        },
+        {
+          "name": "runEvalScenario",
+          "kind": "function"
+        },
+        {
+          "name": "runEvalSuite",
+          "kind": "function"
+        },
+        {
+          "name": "evaluateAssertion",
+          "kind": "function"
+        },
+        {
+          "name": "createEvalEngine",
+          "kind": "function"
+        },
+        {
+          "name": "compareBackends",
+          "kind": "function"
+        },
+        {
+          "name": "runPromptEvalSuite",
+          "kind": "function",
+          "signature": "(client: PromptEvalClient, scenarios?: string[]) => Promise<EvalReport>"
+        },
+        {
+          "name": "createAnthropicClient",
+          "kind": "function",
+          "signature": "(apiKey: string) => PromptEvalClient"
+        },
+        {
+          "name": "BASELINE_METRICS",
+          "kind": "constant"
+        },
+        {
+          "name": "GOLDEN_FIXTURES",
+          "kind": "constant"
+        },
+        {
+          "name": "EVAL_SCENARIOS",
+          "kind": "constant"
+        },
+        {
+          "name": "PROMPT_EVAL_SCENARIOS",
+          "kind": "constant"
+        },
+        {
+          "name": "BenchmarkConfig",
+          "kind": "type"
+        },
+        {
+          "name": "BenchmarkResult",
+          "kind": "type"
+        },
+        {
+          "name": "CoverageResult",
+          "kind": "type"
+        },
+        {
+          "name": "FixtureConfig",
+          "kind": "type"
+        },
+        {
+          "name": "EvalReport",
+          "kind": "type"
+        },
+        {
+          "name": "EvalResult",
+          "kind": "type"
+        },
+        {
+          "name": "EvalScenario",
+          "kind": "type"
+        },
+        {
+          "name": "runPromptEvalScenario",
+          "kind": "function",
+          "signature": "(client: PromptEvalClient, scenario: PromptEvalScenario) => Promise<PromptAssertionResult[]>"
+        },
+        {
+          "name": "VIEWER_SCOUT_SYSTEM_PROMPT",
+          "kind": "constant",
+          "signature": "string"
+        },
+        {
+          "name": "PromptEvalResult",
+          "kind": "type",
+          "signature": "EvalResult & { promptTokensUsed: number; completionTokensUsed: number; modelId: string; temperature: number; latencyMs: number; flaky?: boolean }"
+        },
+        {
+          "name": "PromptEvalClient",
+          "kind": "type",
+          "signature": "{ invoke(opts: { systemPrompt: string; userMessages: Array<{ role: string; content: string }>; tools?: Array<{ name: string; description: string; inputSchema: Record<string, unknown> }>; temperature?: number; seed?: number }): Promise<PromptEvalResponse> }"
+        },
+        {
+          "name": "PromptEvalResponse",
+          "kind": "type",
+          "signature": "{ content: string; toolCalls: ToolCall[]; usage: { promptTokens: number; completionTokens: number }; modelId: string; latencyMs: number }"
+        },
+        {
+          "name": "ToolCall",
+          "kind": "type",
+          "signature": "{ name: string; arguments: Record<string, unknown> }"
+        },
+        {
+          "name": "ToolDefinition",
+          "kind": "type",
+          "signature": "{ name: string; description: string; inputSchema: Record<string, unknown> }"
+        },
+        {
+          "name": "PromptEvalScenario",
+          "kind": "type"
+        },
+        {
+          "name": "PromptAssertion",
+          "kind": "type"
+        },
+        {
+          "name": "PromptEvalDimension",
+          "kind": "type"
+        },
+        {
+          "name": "MockToolResponse",
+          "kind": "type"
+        },
+        {
+          "name": "PromptAssertionResult",
+          "kind": "type"
+        },
+        {
+          "name": "PromptEvalReport",
+          "kind": "type"
+        },
+        {
+          "name": "BaselineMetrics",
+          "kind": "type"
+        },
+        {
+          "name": "GoldenFixture",
+          "kind": "type"
+        },
+        {
+          "name": "ExpectedSymbol",
+          "kind": "type"
+        },
+        {
+          "name": "ExpectedImport",
+          "kind": "type"
+        },
+        {
+          "name": "ExtractionFn",
+          "kind": "type"
+        },
+        {
+          "name": "BackendComparisonResult",
+          "kind": "type"
+        },
+        {
+          "name": "BackendCoverageEntry",
+          "kind": "type"
+        },
+        {
+          "name": "EvalEngine",
+          "kind": "type"
+        },
+        {
+          "name": "MatcherResult",
+          "kind": "type"
+        },
+        {
+          "name": "GOLDEN_QUERY_FIXTURES",
+          "kind": "constant",
+          "signature": "readonly GoldenQueryResult[]"
+        },
+        {
+          "name": "GoldenQueryResult",
+          "kind": "type",
+          "signature": "interface GoldenQueryResult { op: string; args: Record<string, unknown>; expectedMinResults: number; expectedContains?: string[] }"
+        }
+      ],
+      "internal_only": [
+        "EvalOperation",
+        "EvalAssertion",
+        "fixtureTemplate",
+        "measureRss",
+        "computePercentiles",
+        "promptEvalRunner"
+      ]
+    }
+  }
+}

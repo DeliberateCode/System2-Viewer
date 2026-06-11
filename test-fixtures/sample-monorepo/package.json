@@ -1,0 +1,16 @@
+{
+  "name": "sample-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "echo 'tests placeholder'"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

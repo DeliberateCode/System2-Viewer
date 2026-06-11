@@ -1,0 +1,32 @@
+{
+  "name": "@system2-viewer/viewer-surface",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "viewer": "bin/viewer.mjs"
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__",
+    "bin"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@system2-viewer/viewer-config": "*",
+    "@system2-viewer/viewer-core": "*",
+    "@system2-viewer/viewer-indexer": "*",
+    "@system2-viewer/viewer-retrieval": "*",
+    "@system2-viewer/viewer-store": "*",
+    "@system2-viewer/viewer-verify": "*",
+    "better-sqlite3": "12.10.0",
+    "zod": "^3.23.0"
+  }
+}

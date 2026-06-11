@@ -1,0 +1,25 @@
+{
+  "name": "@system2-viewer/viewer-verify",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__"
+  ],
+  "dependencies": {
+    "@system2-viewer/viewer-core": "*",
+    "@system2-viewer/viewer-retrieval": "*",
+    "picomatch": "^4.0.4"
+  },
+  "devDependencies": {
+    "@types/picomatch": "^4.0.3"
+  }
+}

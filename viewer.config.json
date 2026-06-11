@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "repository": {},
+  "indexing": {
+    "gitHistoryDepth": 500,
+    "symbolBackend": "treesitter"
+  },
+  "remote": {
+    "enabled": false
+  },
+  "rules": []
+}

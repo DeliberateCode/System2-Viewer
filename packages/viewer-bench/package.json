@@ -1,0 +1,27 @@
+{
+  "name": "@system2-viewer/viewer-bench",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/__tests__"
+  ],
+  "dependencies": {
+    "@system2-viewer/viewer-core": "*",
+    "@system2-viewer/viewer-indexer": "*",
+    "@system2-viewer/viewer-store": "*",
+    "@system2-viewer/viewer-retrieval": "*"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}

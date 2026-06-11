@@ -1,0 +1,62 @@
+{
+  "name": "system2-viewer",
+  "version": "0.1.0",
+  "description": "Evidence-backed codebase model with structured querying and confidence scoring",
+  "schema_version": "1.0.0",
+  "tags": ["evidence-source", "codebase-model", "architecture-analysis"],
+  "contributions": {
+    "orchestrator": {
+      "principles": [{
+        "id": "viewer-evidence-principle",
+        "content_file": "contributions/principle.md"
+      }],
+      "gates": {
+        "1": {
+          "consultation": [{
+            "id": "viewer-gate1-consultation",
+            "content_file": "contributions/gate1.md",
+            "phase": "pre-delegation"
+          }]
+        },
+        "3": {
+          "consultation": [{
+            "id": "viewer-gate3-consultation",
+            "content_file": "contributions/gate3.md",
+            "phase": "pre-delegation"
+          }]
+        }
+      }
+    },
+    "delegation": {
+      "advisory_sources": [{
+        "id": "viewer-evidence-model",
+        "name": "System2-viewer evidence model",
+        "description": "Local SQLite model of repository structure, claims, and evidence with confidence scoring",
+        "resolution": "mcp"
+      }]
+    },
+    "agents": {},
+    "auxiliary_agents": [{
+      "name": "viewer-scout",
+      "role": "Heavy query delegation target for bulk viewer operations (keeps orchestrator context lean)",
+      "pipeline": false,
+      "delegation_policy": "orchestrator_optional",
+      "agent_file": "agents/viewer-scout.md"
+    }],
+    "mcp_servers": [{
+      "name": "system2-viewer",
+      "description": "Local codebase model with 14 read tools, 6 feedback tools, and 1 index tool",
+      "config": {
+        "type": "stdio",
+        "command": "node",
+        "args": ["${VIEWER_PATH}/packages/viewer-surface/bin/viewer.mjs", "serve"]
+      },
+      "required_by": ["viewer-gate1-consultation", "viewer-gate3-consultation", "viewer-evidence-model"]
+    }],
+    "permissions": [{
+      "tool": "Bash(node \"${VIEWER_PATH}\"*)",
+      "reason": "CLI fallback for subagents without MCP access",
+      "required_by": ["viewer-evidence-model"]
+    }]
+  }
+}

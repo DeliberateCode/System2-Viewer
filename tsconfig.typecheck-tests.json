@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "rootDir": "."
+  },
+  "include": [
+    "packages/*/src/**/*.test.ts",
+    "packages/*/src/**/*.spec.ts",
+    "packages/*/src/__tests__/**/*.ts"
+  ],
+  "references": [
+    { "path": "packages/viewer-core" },
+    { "path": "packages/viewer-config" },
+    { "path": "packages/viewer-store" },
+    { "path": "packages/viewer-indexer" },
+    { "path": "packages/viewer-retrieval" },
+    { "path": "packages/viewer-verify" },
+    { "path": "packages/viewer-surface" }
+  ]
+}

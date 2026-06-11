@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/viewer-core" },
+    { "path": "packages/viewer-config" },
+    { "path": "packages/viewer-store" },
+    { "path": "packages/viewer-indexer" },
+    { "path": "packages/viewer-retrieval" },
+    { "path": "packages/viewer-verify" },
+    { "path": "packages/viewer-surface" },
+    { "path": "packages/viewer-bench" }
+  ]
+}

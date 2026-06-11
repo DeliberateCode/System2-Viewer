@@ -1,0 +1,29 @@
+{
+  "symbols": [
+    { "name": "process_data", "kind": "function", "exported": true, "startLine": 11, "endLine": 13 },
+    { "name": "helper_function", "kind": "function", "exported": false, "startLine": 15, "endLine": 17 },
+    { "name": "Config", "kind": "class", "exported": true, "startLine": 20, "endLine": 23, "metadata": { "attributes": ["derive(Debug, Clone)"] } },
+    { "name": "InternalState", "kind": "class", "exported": false, "startLine": 25, "endLine": 27 },
+    { "name": "Processor", "kind": "interface", "exported": true, "startLine": 29, "endLine": 31 },
+    { "name": "Status", "kind": "class", "exported": true, "startLine": 33, "endLine": 37 },
+    { "name": "MAX_RETRIES", "kind": "variable", "exported": true, "startLine": 39, "endLine": 39 },
+    { "name": "GLOBAL_NAME", "kind": "variable", "exported": true, "startLine": 41, "endLine": 41 },
+    { "name": "ResultAlias", "kind": "type", "exported": true, "startLine": 43, "endLine": 43 },
+    { "name": "Config", "kind": "class", "exported": false, "startLine": 45, "endLine": 49 },
+    { "name": "new", "kind": "method", "exported": true, "startLine": 46, "endLine": 48, "metadata": { "parentImpl": "Config" } },
+    { "name": "Config", "kind": "class", "exported": false, "startLine": 51, "endLine": 55 },
+    { "name": "process", "kind": "method", "exported": false, "startLine": 52, "endLine": 54, "metadata": { "parentImpl": "Config" } },
+    { "name": "restricted_fn", "kind": "function", "exported": false, "startLine": 57, "endLine": 59 },
+    { "name": "async_process", "kind": "function", "exported": true, "startLine": 61, "endLine": 63 },
+    { "name": "generic_with_lifetime", "kind": "function", "exported": true, "startLine": 65, "endLine": 67 },
+    { "name": "INTERNAL_COUNTER", "kind": "variable", "exported": false, "startLine": 69, "endLine": 69 },
+    { "name": "LOCAL_LIMIT", "kind": "variable", "exported": false, "startLine": 71, "endLine": 71 }
+  ],
+  "imports": [
+    { "specifier": "std::io::Read", "names": ["Read"], "isTypeOnly": false, "line": 3 },
+    { "specifier": "std::collections::{HashMap, HashSet}", "names": ["HashMap", "HashSet"], "isTypeOnly": false, "line": 4 },
+    { "specifier": "std::fmt::*", "names": ["*"], "isTypeOnly": false, "line": 5 },
+    { "specifier": "serde", "names": [], "isTypeOnly": false, "line": 7 },
+    { "specifier": "./utils", "names": [], "isTypeOnly": false, "line": 9 }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "system2-viewer",
+  "description": "System2 overlay: evidence-backed codebase model with structured querying, confidence scoring, and advisory consultations at Gate 1 and Gate 3.",
+  "version": "0.1.0",
+  "author": {
+    "name": "DeliberateCode",
+    "url": "https://github.com/DeliberateCode"
+  },
+  "repository": "https://github.com/DeliberateCode/System2-Viewer",
+  "license": "MIT"
+}

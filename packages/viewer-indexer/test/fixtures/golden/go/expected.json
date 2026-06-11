@@ -1,0 +1,154 @@
+{
+  "symbols": [
+    {
+      "name": "HandleRequest",
+      "kind": "function",
+      "exported": true,
+      "startLine": 11,
+      "endLine": 13
+    },
+    {
+      "name": "helperFunc",
+      "kind": "function",
+      "exported": false,
+      "startLine": 16,
+      "endLine": 18
+    },
+    {
+      "name": "Server",
+      "kind": "class",
+      "exported": true,
+      "startLine": 21,
+      "endLine": 24
+    },
+    {
+      "name": "config",
+      "kind": "class",
+      "exported": false,
+      "startLine": 27,
+      "endLine": 29
+    },
+    {
+      "name": "Handler",
+      "kind": "interface",
+      "exported": true,
+      "startLine": 32,
+      "endLine": 35
+    },
+    {
+      "name": "Handle",
+      "kind": "method",
+      "exported": true,
+      "startLine": 33,
+      "endLine": 33,
+      "metadata": { "parentInterface": "Handler" }
+    },
+    {
+      "name": "Close",
+      "kind": "method",
+      "exported": true,
+      "startLine": 34,
+      "endLine": 34,
+      "metadata": { "parentInterface": "Handler" }
+    },
+    {
+      "name": "Start",
+      "kind": "function",
+      "exported": true,
+      "startLine": 38,
+      "endLine": 40
+    },
+    {
+      "name": "listen",
+      "kind": "function",
+      "exported": false,
+      "startLine": 43,
+      "endLine": 45
+    },
+    {
+      "name": "MaxRetries",
+      "kind": "variable",
+      "exported": true,
+      "startLine": 48,
+      "endLine": 48
+    },
+    {
+      "name": "defaultTimeout",
+      "kind": "variable",
+      "exported": false,
+      "startLine": 51,
+      "endLine": 51
+    },
+    {
+      "name": "Version",
+      "kind": "variable",
+      "exported": true,
+      "startLine": 54,
+      "endLine": 54
+    },
+    {
+      "name": "logger",
+      "kind": "variable",
+      "exported": false,
+      "startLine": 57,
+      "endLine": 57
+    },
+    {
+      "name": "RequestID",
+      "kind": "type",
+      "exported": true,
+      "startLine": 60,
+      "endLine": 60
+    },
+    {
+      "name": "validator",
+      "kind": "interface",
+      "exported": false,
+      "startLine": 63,
+      "endLine": 65
+    },
+    {
+      "name": "Validate",
+      "kind": "method",
+      "exported": false,
+      "startLine": 64,
+      "endLine": 64,
+      "metadata": { "parentInterface": "validator" }
+    },
+    {
+      "name": "init",
+      "kind": "function",
+      "exported": false,
+      "startLine": 68,
+      "endLine": 70,
+      "metadata": { "isInit": true }
+    }
+  ],
+  "imports": [
+    {
+      "specifier": "fmt",
+      "names": ["fmt"],
+      "isTypeOnly": false,
+      "line": 4
+    },
+    {
+      "specifier": "os",
+      "names": ["os"],
+      "isTypeOnly": false,
+      "line": 5
+    },
+    {
+      "specifier": "net/http",
+      "names": ["http"],
+      "isTypeOnly": false,
+      "line": 6,
+      "alias": "h"
+    },
+    {
+      "specifier": "strings",
+      "names": ["*"],
+      "isTypeOnly": false,
+      "line": 7
+    }
+  ]
+}

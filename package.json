@@ -1,0 +1,35 @@
+{
+  "name": "system2-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo tsconfig.tsbuildinfo",
+    "test": "vitest run",
+    "typecheck": "tsc -b --noEmit",
+    "typecheck:tests": "tsc -p tsconfig.typecheck-tests.json",
+    "boundary-check": "tsx tools/boundary-check/index.ts",
+    "bench": "tsx packages/viewer-bench/src/run-bench.ts",
+    "bench:evals": "tsx packages/viewer-bench/src/run-evals.ts",
+    "bench:prompt-evals": "tsx packages/viewer-bench/src/run-prompt-evals.ts",
+    "bench:evals:prompt": "tsx packages/viewer-bench/src/run-prompt-evals.ts",
+    "audit:egress": "tsx tools/audit-egress/audit-egress.ts",
+    "ci": "npm run build && npm run typecheck:tests && npm test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "overrides": {
+    "tree-sitter": "0.21.1"
+  }
+}
