@@ -421,8 +421,12 @@ export function renderInvariants(
 ): void {
   const violations = data['violations'] as Array<{
     ruleId: string;
-    description: string;
-    evidence: Array<{ evidenceId: string }>;
+    ruleName?: string;
+    description?: string;
+    fromPath?: string;
+    toPath?: string;
+    severity?: string;
+    evidence: Array<{ evidenceId?: string; kind?: string; description?: string }>;
   }> | undefined;
 
   if (!violations || violations.length === 0) {
@@ -432,11 +436,13 @@ export function renderInvariants(
 
   lines.push(trivialLine(`Violations: ${violations.length}`));
   for (const v of violations) {
+    const desc = v.description
+      ?? (v.fromPath && v.toPath ? `${v.ruleName ?? v.ruleId}: ${v.fromPath} -> ${v.toPath}` : v.ruleName ?? v.ruleId);
     const evId = v.evidence?.[0]?.evidenceId;
     if (evId) {
-      lines.push(evidenceLine(`  ${v.description}`, evId));
+      lines.push(evidenceLine(`  ${desc}`, evId));
     } else {
-      lines.push(hypothesisLine(`  ${v.description}`));
+      lines.push(hypothesisLine(`  ${desc}`));
     }
   }
   appendPartialityNotice(lines, envelope);

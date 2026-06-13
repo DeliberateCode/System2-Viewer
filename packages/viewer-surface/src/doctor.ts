@@ -478,6 +478,21 @@ export async function buildDoctorReport(opts: DoctorOpts): Promise<DoctorReport>
       patternCount,
     },
     ...(workerPoolConfig != null ? { workerPool: workerPoolConfig } : {}),
+    ...(opts.frameworkHintCount != null ? {
+      frameworkHints: {
+        configured: opts.frameworkHintCount,
+        defaultActive: opts.defaultHintCount ?? 0,
+        overlayContributed: 0,
+        totalPatterns: (opts.frameworkHintCount ?? 0) + (opts.defaultHintCount ?? 0),
+      },
+    } : {}),
+    ...(opts.topologyHintCount != null ? {
+      topologyHintsStatus: {
+        configured: opts.topologyHintCount,
+        resolved: opts.topologyResolvedCount ?? 0,
+        unresolved: opts.topologyUnresolvedCount ?? 0,
+      },
+    } : {}),
     suggestions,
     ...(schemaMigration != null ? { schemaMigration } : {}),
   };

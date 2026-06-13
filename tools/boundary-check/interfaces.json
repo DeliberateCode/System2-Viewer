@@ -216,7 +216,7 @@
         {
           "name": "ViewerConfig",
           "kind": "type",
-          "signature": "{ version: 1; repository: { name?: string; exclude?: string[] }; indexing: { gitHistoryDepth: number; symbolBackend: 'treesitter' | 'lsp' | 'scip'; workspaceDepth?: number; workspaceMaxRepos?: number; embeddingModel?: string; workerCount?: number; workerMinFiles?: number; sqlite?: { pageSize?: number; cacheSize?: number; mmapSize?: number; busyTimeout?: number } }; subsystems?: Array<{ id: string; name: string; paths: string[] }>; rules?: RuleDef[]; claimTypes?: ClaimTypeDef[]; remote: { enabled: boolean } }"
+          "signature": "{ version: 1; repository: { name?: string; exclude?: string[] }; indexing: { gitHistoryDepth: number; symbolBackend: 'treesitter' | 'lsp' | 'scip'; workspaceDepth?: number; workspaceMaxRepos?: number; embeddingModel?: string; workerCount?: number; workerMinFiles?: number; sqlite?: { pageSize?: number; cacheSize?: number; mmapSize?: number; busyTimeout?: number } }; subsystems?: Array<{ id: string; name: string; paths: string[] }>; rules?: RuleDef[]; claimTypes?: ClaimTypeDef[]; frameworkHints?: FrameworkHintDef[]; moduleBoundaries?: BoundaryDef[]; topologyHints?: TopologyHintDef[]; remote: { enabled: boolean } }"
         },
         {
           "name": "RuleDef",
@@ -232,6 +232,26 @@
           "name": "RecipeDef",
           "kind": "type",
           "signature": "{ recipeType: string; description: string; command?: string }"
+        },
+        {
+          "name": "FrameworkHintDef",
+          "kind": "type",
+          "signature": "{ pattern: string; framework: string; entrypointKind: string; excludePaths?: string[] }"
+        },
+        {
+          "name": "BoundaryDef",
+          "kind": "type",
+          "signature": "{ name: string; paths: string[]; publicInterface: string[]; allowedDependencies?: string[] }"
+        },
+        {
+          "name": "TopologyHintDef",
+          "kind": "type",
+          "signature": "{ source: string; sink: string; channel: string; transport: string; direction: TopologyDirection }"
+        },
+        {
+          "name": "TopologyDirection",
+          "kind": "type",
+          "signature": "'publish' | 'subscribe' | 'request' | 'respond'"
         },
         {
           "name": "ConfigResult",
@@ -282,13 +302,25 @@
           "name": "DEFAULT_SQLITE_BUSY_TIMEOUT",
           "kind": "constant",
           "signature": "5000"
+        },
+        {
+          "name": "DEFAULT_FRAMEWORK_HINTS",
+          "kind": "constant",
+          "signature": "readonly FrameworkHintDef[]"
+        },
+        {
+          "name": "extractDecoratorNames",
+          "kind": "function",
+          "signature": "(metadataJson: string | null) => string[]"
         }
       ],
       "internal_only": [
         "parseConfig",
         "validateSchema",
         "mergeDefaults",
-        "SECRET_FILENAME_PATTERNS"
+        "SECRET_FILENAME_PATTERNS",
+        "sanitizeConfigString",
+        "validateBoundaryArray"
       ]
     },
     "viewer-store": {
@@ -619,6 +651,31 @@
           "name": "JsonProgressReporter",
           "kind": "class",
           "signature": "class JsonProgressReporter implements ProgressReporter"
+        },
+        {
+          "name": "BoundaryDef",
+          "kind": "type",
+          "signature": "{ name: string; paths: string[]; publicInterface: string[]; allowedDependencies?: string[] }"
+        },
+        {
+          "name": "resolveBoundaryMembership",
+          "kind": "function",
+          "signature": "(boundaries: BoundaryDef[], filePaths: string[]) => ResolvedBoundaries"
+        },
+        {
+          "name": "BoundaryMembership",
+          "kind": "type",
+          "signature": "{ boundaryName: string; isPublic: boolean }"
+        },
+        {
+          "name": "ResolvedBoundaryInfo",
+          "kind": "type",
+          "signature": "{ def: BoundaryDef; files: Set<string>; publicFiles: Set<string> }"
+        },
+        {
+          "name": "ResolvedBoundaries",
+          "kind": "type",
+          "signature": "{ fileToBoundary: Map<string, BoundaryMembership>; boundaries: Map<string, ResolvedBoundaryInfo>; warnings: string[] }"
         }
       ],
       "internal_only": [
@@ -717,6 +774,31 @@
           "signature": "(handle: EvidenceAgreementReadHandle, sampleSize: number) => EvidenceAgreementAudit"
         },
         {
+          "name": "getImportGraph",
+          "kind": "function",
+          "signature": "(handle: ReadView, params: ImportGraphParams) => ResultEnvelope<ImportGraphResult>"
+        },
+        {
+          "name": "ImportGraphResult",
+          "kind": "type",
+          "signature": "{ adjacencyList: Record<string, string[]>; nodes: ImportGraphNode[]; cycles?: string[][]; cyclesLimitReached?: boolean; metrics: ImportGraphMetrics }"
+        },
+        {
+          "name": "ImportGraphNode",
+          "kind": "type",
+          "signature": "{ id: string; displayName: string; fanIn: number; fanOut: number }"
+        },
+        {
+          "name": "ImportGraphMetrics",
+          "kind": "type",
+          "signature": "{ totalNodes: number; totalEdges: number; cycleCount?: number; maxFanIn: number; maxFanOut: number; avgFanOut: number }"
+        },
+        {
+          "name": "ImportGraphParams",
+          "kind": "type",
+          "signature": "{ scope: string; detectCycles?: boolean; transitiveDeps?: boolean; maxCycles?: number }"
+        },
+        {
           "name": "PIPELINE_STAGES",
           "kind": "constant",
           "signature": "readonly string[]"
@@ -759,6 +841,16 @@
         {
           "name": "RepositoryOverview",
           "kind": "type"
+        },
+        {
+          "name": "BoundaryContextsSummary",
+          "kind": "type",
+          "signature": "{ declared: number; totalFiles: number; coveragePercent: number; violationCount: number }"
+        },
+        {
+          "name": "EventTopologySummary",
+          "kind": "type",
+          "signature": "{ channels: number; edges: number; transports: string[]; unresolvedHints: number }"
         },
         {
           "name": "EntrypointResult",
@@ -957,6 +1049,11 @@
           "name": "NON_EAGER_CLAIM_TYPES",
           "kind": "constant",
           "signature": "readonly string[]"
+        },
+        {
+          "name": "BoundaryContext",
+          "kind": "type",
+          "signature": "{ fileToBoundary: Map<string, { boundaryName: string; isPublic: boolean }>; boundaries: Map<string, { publicFiles: Set<string>; allowedDependencies?: string[] }> }"
         },
         {
           "name": "EnforceableRule",

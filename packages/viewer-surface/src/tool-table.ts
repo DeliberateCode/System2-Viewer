@@ -1,7 +1,7 @@
 /**
- * TOOL_TABLE: 21 MCP tool definitions for viewer.
+ * TOOL_TABLE: 22 MCP tool definitions for viewer.
  *
- * 13 read tools, 1 verify tool, 6 feedback tools, 1 index tool.
+ * 14 read tools, 1 verify tool, 6 feedback tools, 1 index tool.
  * Each entry: name, description, Zod input schema, capability class,
  * handler key, and optional pre-dispatch resolution config.
  */
@@ -47,6 +47,7 @@ const TraceFlowSchema = z.object({
   targetOrIntent: z.string(),
   maxDepth: z.number().int().positive().optional(),
   prefer: z.enum(['tests', 'docs']).optional(),
+  edgeKinds: z.array(z.string()).optional(),
 });
 
 const ExplainSubsystemSchema = z.object({
@@ -140,6 +141,13 @@ const AnnotateSubsystemSchema = z.object({
   annotation: z.string(),
 });
 
+const GetImportGraphSchema = z.object({
+  scope: z.string().describe('Scope: file path, subsystem name, or "*" for full repo.'),
+  detectCycles: z.boolean().optional().default(false),
+  transitiveDeps: z.boolean().optional().default(false),
+  maxCycles: z.number().int().positive().optional().default(100),
+});
+
 const IndexSchema = z.object({
   repoRoot: z.string(),
   depth: z.number().int().nonnegative().optional(),
@@ -153,7 +161,7 @@ const IndexSchema = z.object({
 // -- The table --
 
 export const TOOL_TABLE: readonly ToolEntry[] = [
-  // === Read tools (13) ===
+  // === Read tools (14) ===
   {
     name: 'viewer.doctor',
     description: 'Check viewer health: Node.js version, SQLite binding, grammar availability, TS backend, git, model status.',
@@ -307,6 +315,14 @@ export const TOOL_TABLE: readonly ToolEntry[] = [
     capabilityClass: 'feedback',
     handlerKey: 'annotateSubsystem',
     preDispatch: { argName: 'targetId', hint: 'subsystem' },
+  },
+  // === Import graph (1) ===
+  {
+    name: 'viewer.getImportGraph',
+    description: 'Query the import graph: adjacency list, fan-in/fan-out, cycle detection (one representative cycle per SCC), transitive dependencies. Scope by file, subsystem, or "*".',
+    inputSchema: GetImportGraphSchema,
+    capabilityClass: 'read',
+    handlerKey: 'getImportGraph',
   },
   // === Index tool (1) ===
   {

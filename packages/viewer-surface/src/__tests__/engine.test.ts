@@ -232,7 +232,9 @@ describe('createViewerEngine', () => {
           )
           .all() as Array<{ kind: string }>;
 
-        expect(rows).toHaveLength(0);
+        // Only boundary-violation is seeded as a built-in claim_type kind
+        expect(rows).toHaveLength(1);
+        expect(rows[0].kind).toBe('boundary-violation');
       } finally {
         db.close();
       }

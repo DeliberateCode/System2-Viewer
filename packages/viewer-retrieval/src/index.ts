@@ -11,6 +11,8 @@ export type {
   RetrievalResult,
   RetrievalAnchor,
   RepositoryOverview,
+  BoundaryContextsSummary,
+  EventTopologySummary,
   EntrypointResult,
   FlowTrace,
   SubsystemExplanation,
@@ -58,6 +60,9 @@ export { explainSubsystem } from './ops/subsystem.js';
 export { estimateBlastRadius } from './ops/blast.js';
 export { listClaims } from './ops/claims.js';
 export { listUncertainties } from './ops/uncertainties.js';
+
+export { getImportGraph } from './ops/import-graph.js';
+export type { ImportGraphResult, ImportGraphNode, ImportGraphMetrics, ImportGraphParams } from './ops/import-graph.js';
 
 // Utility functions
 export { buildClaimPayload } from './ops/claim-payload.js';

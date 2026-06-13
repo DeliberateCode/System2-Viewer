@@ -7,7 +7,7 @@
  * returns null, probeEmbedderStatus returns 'not_installed', and the Embedder
  * interface shape is correct.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   tryLoadEmbedder,
   probeEmbedderStatus,
@@ -15,11 +15,19 @@ import {
   tokenize,
   DEFAULT_MODEL_NAME,
   DEFAULT_DIMENSION,
+  _internals,
   type Embedder,
   type EmbedderStatus,
 } from '../embedder.js';
 
 describe('tryLoadEmbedder', () => {
+  beforeEach(() => {
+    vi.spyOn(_internals, 'importOnnx').mockResolvedValue(null);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('returns null when onnxruntime-node is not installed', async () => {
     const result = await tryLoadEmbedder();
     expect(result).toBeNull();
@@ -32,6 +40,13 @@ describe('tryLoadEmbedder', () => {
 });
 
 describe('probeEmbedderStatus', () => {
+  beforeEach(() => {
+    vi.spyOn(_internals, 'importOnnx').mockResolvedValue(null);
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('returns not_installed when onnxruntime-node is unavailable', async () => {
     const status = await probeEmbedderStatus();
     expect(status.status).toBe('not_installed');

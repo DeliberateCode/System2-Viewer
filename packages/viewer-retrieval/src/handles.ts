@@ -87,8 +87,10 @@ export type ReadView = PipelineReadHandle & {
   allEdges?(kind?: string): Array<{ fromNodeId: string; toNodeId: string; kind: string }>;
 };
 
-/** Handle for findEntrypoints. */
-export type EntrypointReadHandle = PipelineReadHandle;
+/** Handle for findEntrypoints. Widens with decorated-symbol enumeration. */
+export type EntrypointReadHandle = PipelineReadHandle & {
+  decoratedSymbols?(): Array<{ id: string; metadataJson: string; path: string | null }>;
+};
 
 /** Handle for traceFlow. Widens with inbound edge lookup. */
 export type FlowReadHandle = PipelineReadHandle & {

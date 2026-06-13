@@ -394,8 +394,10 @@ describe('custom claim types integration', () => {
           )
           .all() as Array<{ kind: string }>;
 
-        // None of the built-in claim types should appear
+        // Built-in claim types should not appear, except boundary-violation
+        // which is intentionally seeded as a kind_registry claim_type
         for (const builtIn of BUILT_IN_CLAIM_TYPES) {
+          if (builtIn === 'boundary-violation') continue;
           const found = rows.find((r) => r.kind === builtIn);
           expect(found).toBeUndefined();
         }

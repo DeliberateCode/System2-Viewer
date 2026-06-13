@@ -87,6 +87,20 @@ export interface RetrievalResult {
 }
 
 /** Repository overview result data. */
+export interface BoundaryContextsSummary {
+  declared: number;
+  totalFiles: number;
+  coveragePercent: number;
+  violationCount: number;
+}
+
+export interface EventTopologySummary {
+  channels: number;
+  edges: number;
+  transports: string[];
+  unresolvedHints: number;
+}
+
 export interface RepositoryOverview {
   mainLanguages: string[];
   structure: { directories: number; totalFiles: number };
@@ -95,6 +109,8 @@ export interface RepositoryOverview {
   topClaims: ClaimSummaryRef[];
   topUncertainties: UncertaintyItem[];
   backendCoverage: Record<string, unknown>;
+  boundaryContexts?: BoundaryContextsSummary;
+  eventTopology?: EventTopologySummary;
 }
 
 /** Entrypoint search result data. */
@@ -104,6 +120,8 @@ export interface EntrypointResult {
     displayName: string;
     score: number;
     evidence: EvidenceRef[];
+    source?: string;
+    entrypointKind?: string;
   }>;
 }
 
@@ -118,6 +136,7 @@ export interface FlowTrace {
     evidence: EvidenceRef[];
     unknown?: boolean;
     ambiguity?: string;
+    declaredTag?: string;
   }>;
 }
 

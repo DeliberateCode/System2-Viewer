@@ -21,7 +21,7 @@ export function traceFlow(
   handle: FlowReadHandle,
   start: string,
   targetOrIntent: string,
-  opts?: { revision?: string; maxDepth?: number; prefer?: 'tests' | 'docs' },
+  opts?: { revision?: string; maxDepth?: number; prefer?: 'tests' | 'docs'; edgeKinds?: string[] },
 ): ResultEnvelope<FlowTrace> {
   const revision = opts?.revision ?? 'latest';
   const maxDepth = opts?.maxDepth ?? 10;
@@ -84,6 +84,7 @@ export function traceFlow(
 
   let foundTarget: string | null = null;
   let truncatedAtMaxDepth = false;
+  const allowedEdgeKinds = opts?.edgeKinds ? new Set(opts.edgeKinds) : null;
 
   let head = 0;
   while (head < queue.length && !foundTarget) {
@@ -101,7 +102,11 @@ export function traceFlow(
       inboundEdges = handle.inboundEdges(current.nodeId);
     }
 
-    const allEdges = [...neighbors, ...inboundEdges];
+    let allEdges = [...neighbors, ...inboundEdges];
+
+    if (allowedEdgeKinds) {
+      allEdges = allEdges.filter((e) => allowedEdgeKinds.has(e.kind));
+    }
 
     for (const edge of allEdges) {
       const nextId = edge.toNodeId === current.nodeId ? edge.fromNodeId : edge.toNodeId;
@@ -163,6 +168,7 @@ export function traceFlow(
         epistemic: edgeEpistemic,
         confidence: edgeConfidence,
         evidence: segmentEvidence,
+        ...(step.edge.kind === 'event-flow' ? { declaredTag: '[declared]' } : {}),
       });
 
       evidence.push(...segmentEvidence);

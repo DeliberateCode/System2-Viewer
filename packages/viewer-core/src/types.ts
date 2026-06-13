@@ -41,7 +41,7 @@ export type EdgeKind =
   | (string & {});
 
 /** Epistemic marker for relationships and evidence. */
-export type Epistemic = 'static' | 'inferred' | 'observed';
+export type Epistemic = 'static' | 'inferred' | 'observed' | 'declared';
 
 /** Node kind -- open string type. */
 export type NodeKind = string;

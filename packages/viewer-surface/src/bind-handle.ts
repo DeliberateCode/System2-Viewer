@@ -40,6 +40,7 @@ export type UnionHandle = ReadView &
   EvidenceAgreementReadHandle & {
     semanticSearch?: (queryVector: Float32Array, limit?: number) => SimilarityHit[];
     embeddingCoverage?: () => { totalNodes: number; embeddedNodes: number };
+    allImportEdges?: () => Array<{ fromNodeId: string; toNodeId: string; fromPath: string; toPath: string }>;
   };
 
 /**
@@ -81,6 +82,22 @@ export function bindHandle(
       readHandle.claimsByPrefix(prefix, limit),
 
     partiality: (rev: string) => readHandle.partiality(rev),
+
+    // EntrypointReadHandle widenings
+    decoratedSymbols: (): Array<{ id: string; metadataJson: string; path: string | null }> => {
+      const { sql: nFilter, params: nParams } = intervalFilter(revision, 'n');
+      const sql = `
+        SELECT n.id, n.metadata_json, n.path FROM nodes n
+        WHERE n.kind = 'symbol' AND ${nFilter}
+        AND (n.metadata_json LIKE '%"decorators"%'
+          OR n.metadata_json LIKE '%"attributes"%'
+          OR n.metadata_json LIKE '%"annotations"%')
+      `;
+      const rows = db.prepare(sql).all(nParams) as Array<{
+        id: string; metadata_json: string; path: string | null;
+      }>;
+      return rows.map(r => ({ id: r.id, metadataJson: r.metadata_json, path: r.path }));
+    },
 
     // ReadView widenings
     enumerateContainedNodes: (rootId: string): Array<Record<string, unknown>> => {
@@ -237,6 +254,32 @@ export function bindHandle(
         verificationRecipesJson: row.verification_recipes_json,
         surfaced: row.surfaced,
       };
+    },
+
+    allImportEdges: (): Array<{ fromNodeId: string; toNodeId: string; fromPath: string; toPath: string }> => {
+      const { sql: filter, params: filterParams } = intervalFilter(revision, 'e');
+      const sql = `
+        SELECT e.from_node_id, e.to_node_id,
+               nf.path AS from_path, nt.path AS to_path
+        FROM edges e
+        JOIN nodes nf ON nf.id = e.from_node_id AND nf.valid_to_revision IS NULL
+        JOIN nodes nt ON nt.id = e.to_node_id AND nt.valid_to_revision IS NULL
+        WHERE e.kind = 'imports' AND ${filter}
+      `;
+      const rows = db.prepare(sql).all({ ...filterParams }) as Array<{
+        from_node_id: string;
+        to_node_id: string;
+        from_path: string | null;
+        to_path: string | null;
+      }>;
+      return rows
+        .filter((r) => r.from_path != null && r.to_path != null)
+        .map((r) => ({
+          fromNodeId: r.from_node_id,
+          toNodeId: r.to_node_id,
+          fromPath: r.from_path!,
+          toPath: r.to_path!,
+        }));
     },
 
     // Semantic search widening (delegates to ReadHandle)

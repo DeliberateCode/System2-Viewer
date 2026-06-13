@@ -305,7 +305,7 @@ describe('ModelStore', () => {
         const db = new Database(join(dataDir, 'model.sqlite'), { readonly: true });
         try {
           const version = db.pragma('user_version', { simple: true }) as number;
-          expect(version).toBe(5);
+          expect(version).toBe(6);
         } finally {
           db.close();
         }
@@ -324,7 +324,7 @@ describe('ModelStore', () => {
         const db = new Database(join(dataDir, 'model.sqlite'), { readonly: true });
         try {
           const count = db.prepare('SELECT COUNT(*) AS cnt FROM kind_registry').get() as { cnt: number };
-          expect(count.cnt).toBe(28); // Same count as first init
+          expect(count.cnt).toBe(30); // Same count as first init
         } finally {
           db.close();
         }

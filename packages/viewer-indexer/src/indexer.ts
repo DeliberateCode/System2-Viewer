@@ -179,10 +179,19 @@ function processFileSymbols(params: FileSymbolProcessingParams): number {
 }
 
 /** Config shape the Indexer needs. The caller provides this (e.g. from viewer-config). */
+interface TopologyHintInput {
+  source: string;
+  sink: string;
+  channel: string;
+  transport: string;
+  direction: string;
+}
+
 interface IndexerConfig {
   gitHistoryDepth: number;
   symbolBackend: string;
   excludes: string[];
+  topologyHints?: TopologyHintInput[];
 }
 
 /** Structural type for exclude matchers. Provided by the caller. */
@@ -466,6 +475,15 @@ export class Indexer {
         this.executeSubsystemInference(ctx);
       } catch (err) {
         throw wrapStageError('Subsystem Inference', err);
+      }
+
+      // Stage 7.5: Topology hint edge creation
+      if (this.config.topologyHints && this.config.topologyHints.length > 0) {
+        try {
+          this.executeTopologyHints(ctx);
+        } catch (err) {
+          throw wrapStageError('Topology Hint Resolution', err);
+        }
       }
 
       // Stage 8: Claim generation
@@ -1176,6 +1194,88 @@ export class Indexer {
       };
       txn.upsertNode(pkgNode);
     }
+  }
+
+  private executeTopologyHints(ctx: PipelineCtx): void {
+    const hints = this.config.topologyHints;
+    if (!hints || hints.length === 0) return;
+
+    const { txn, repositoryId, revision, now, fileMap, partiality } = ctx;
+    let createdEdges = 0;
+    let unresolvedCount = 0;
+
+    for (const hint of hints) {
+      const sourceMatcher = picomatch(hint.source, { dot: true });
+      const sinkMatcher = picomatch(hint.sink, { dot: true });
+
+      const sourceFiles: string[] = [];
+      const sinkFiles: string[] = [];
+
+      for (const [relPath, nodeId] of fileMap) {
+        if (sourceMatcher(relPath)) sourceFiles.push(nodeId);
+        if (sinkMatcher(relPath)) sinkFiles.push(nodeId);
+      }
+
+      if (sourceFiles.length === 0 || sinkFiles.length === 0) {
+        unresolvedCount++;
+        partiality.push({
+          scope: `topology_hint:${hint.channel}`,
+          extracted: [],
+          failed: [`topology_hint_unresolved: source=${hint.source} (${sourceFiles.length} matches), sink=${hint.sink} (${sinkFiles.length} matches)`],
+          skipped: [],
+        });
+        continue;
+      }
+
+      const MAX_EDGES_PER_HINT = 1000;
+      const pairCount = sourceFiles.length * sinkFiles.length;
+      if (pairCount > MAX_EDGES_PER_HINT) {
+        this.logger.warn('Topology hint edge cap reached', {
+          channel: hint.channel, sourceFiles: sourceFiles.length, sinkFiles: sinkFiles.length,
+          would: pairCount, cap: MAX_EDGES_PER_HINT,
+        });
+        partiality.push({
+          scope: `topology_hint:${hint.channel}`,
+          extracted: [`${MAX_EDGES_PER_HINT} edges (capped)`],
+          failed: [`cartesian product ${pairCount} exceeds cap ${MAX_EDGES_PER_HINT}`],
+          skipped: [],
+        });
+      }
+
+      let hintEdges = 0;
+      for (const srcId of sourceFiles) {
+        if (hintEdges >= MAX_EDGES_PER_HINT) break;
+        for (const snkId of sinkFiles) {
+          if (hintEdges >= MAX_EDGES_PER_HINT) break;
+          const edgeId = `edge::${repositoryId}::event-flow::${srcId}::${snkId}::${hint.channel}`;
+          txn.upsertEdge({
+            id: edgeId,
+            kind: 'event-flow',
+            epistemic: 'declared',
+            fromNodeId: srcId,
+            toNodeId: snkId,
+            repositoryId,
+            confidenceBand: 'low',
+            provenanceMethod: 'topology-hint',
+            extractor: 'indexer::topology-hint',
+            evidenceIdsJson: null,
+            metadataJson: scrubSecrets(JSON.stringify({
+              channel: hint.channel,
+              transport: hint.transport,
+              direction: hint.direction,
+            })).scrubbed,
+            validFromRevision: revision,
+            validToRevision: null,
+            createdAt: now,
+            updatedAt: now,
+          });
+          hintEdges++;
+          createdEdges++;
+        }
+      }
+    }
+
+    this.logger.info('Topology hints resolved', { total: hints.length, edges: createdEdges, unresolved: unresolvedCount });
   }
 
   private executeClaimGeneration(ctx: PipelineCtx): void {

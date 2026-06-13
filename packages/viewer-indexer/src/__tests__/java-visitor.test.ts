@@ -739,6 +739,227 @@ describe('visitJava', () => {
     });
   });
 
+  describe('annotation extraction', () => {
+    /**
+     * Build a modifiers node that includes both keyword modifiers (public,
+     * private, etc.) and annotation nodes (marker_annotation / annotation).
+     */
+    function buildModifiersWithAnnotations(
+      mods: string[],
+      annotations: { name: string; marker: boolean }[],
+      row: number = 0,
+    ): TreeSitterNode {
+      const modChildren = mods.map((m) =>
+        mockNode(m, { text: m, startRow: row, endRow: row }),
+      );
+      const annotChildren = annotations.map((a) => {
+        const nameNode = mockIdentifier(a.name, row);
+        return mockNode(a.marker ? 'marker_annotation' : 'annotation', {
+          text: a.marker ? `@${a.name}` : `@${a.name}(...)`,
+          startRow: row,
+          endRow: row,
+          fields: { name: nameNode },
+        });
+      });
+      const allChildren = [...annotChildren, ...modChildren];
+      return mockNode('modifiers', {
+        text: allChildren.map((c) => c.text).join(' '),
+        startRow: row,
+        endRow: row,
+        children: allChildren,
+        namedChildren: allChildren,
+      });
+    }
+
+    function buildAnnotatedMethodDecl(
+      name: string,
+      mods: string[],
+      annotations: { name: string; marker: boolean }[],
+      startRow: number,
+      endRow: number,
+    ): TreeSitterNode {
+      const nameNode = mockIdentifier(name, startRow);
+      const modsNode = buildModifiersWithAnnotations(mods, annotations, startRow);
+      return mockNode('method_declaration', {
+        startRow,
+        endRow,
+        namedChildren: [modsNode, nameNode],
+        fields: { name: nameNode, modifiers: modsNode },
+      });
+    }
+
+    function buildAnnotatedFieldDecl(
+      fieldNames: string[],
+      mods: string[],
+      annotations: { name: string; marker: boolean }[],
+      startRow: number,
+      endRow: number,
+    ): TreeSitterNode {
+      const modsNode = buildModifiersWithAnnotations(mods, annotations, startRow);
+      const declarators = fieldNames.map((fn) => {
+        const nameNode = mockIdentifier(fn, startRow);
+        return mockNode('variable_declarator', {
+          startRow,
+          endRow,
+          namedChildren: [nameNode],
+          fields: { name: nameNode },
+        });
+      });
+      return mockNode('field_declaration', {
+        startRow,
+        endRow,
+        namedChildren: [modsNode, ...declarators],
+        fields: { modifiers: modsNode },
+      });
+    }
+
+    function buildAnnotatedClassDecl(
+      name: string,
+      mods: string[],
+      annotations: { name: string; marker: boolean }[],
+      startRow: number,
+      endRow: number,
+      bodyChildren: TreeSitterNode[] = [],
+    ): TreeSitterNode {
+      const nameNode = mockIdentifier(name, startRow);
+      const modsNode = buildModifiersWithAnnotations(mods, annotations, startRow);
+      const bodyNode = mockNode('class_body', {
+        startRow: startRow + 1,
+        endRow,
+        namedChildren: bodyChildren,
+      });
+      return mockNode('class_declaration', {
+        startRow,
+        endRow,
+        namedChildren: [modsNode, nameNode, bodyNode],
+        fields: { name: nameNode, modifiers: modsNode, body: bodyNode },
+      });
+    }
+
+    it('extracts @RequestMapping marker annotation from a method', () => {
+      const method = buildAnnotatedMethodDecl(
+        'handleRequest', ['public'],
+        [{ name: 'RequestMapping', marker: true }],
+        10, 15,
+      );
+      const root = buildProgram([
+        buildClassDecl('Controller', ['public'], 5, 20, [method]),
+      ]);
+      const { symbols } = visitJava(root, '');
+      const m = symbols.find((s) => s.name === 'handleRequest');
+      expect(m).toBeDefined();
+      expect(m!.metadata).toEqual({
+        parentClass: 'Controller',
+        annotations: ['RequestMapping'],
+      });
+    });
+
+    it('extracts @GetMapping annotation with arguments from a method', () => {
+      const method = buildAnnotatedMethodDecl(
+        'getUsers', ['public'],
+        [{ name: 'GetMapping', marker: false }],
+        10, 15,
+      );
+      const root = buildProgram([
+        buildClassDecl('UserController', ['public'], 5, 20, [method]),
+      ]);
+      const { symbols } = visitJava(root, '');
+      const m = symbols.find((s) => s.name === 'getUsers');
+      expect(m).toBeDefined();
+      expect(m!.metadata).toEqual({
+        parentClass: 'UserController',
+        annotations: ['GetMapping'],
+      });
+    });
+
+    it('extracts annotations from field declarations', () => {
+      const field = buildAnnotatedFieldDecl(
+        ['userService'], ['private'],
+        [{ name: 'Autowired', marker: true }],
+        10, 10,
+      );
+      const root = buildProgram([
+        buildClassDecl('AppConfig', ['public'], 5, 20, [field]),
+      ]);
+      const { symbols } = visitJava(root, '');
+      const f = symbols.find((s) => s.name === 'userService');
+      expect(f).toBeDefined();
+      expect(f!.metadata).toEqual({
+        parentClass: 'AppConfig',
+        annotations: ['Autowired'],
+      });
+    });
+
+    it('extracts annotations from class declarations', () => {
+      const root = buildProgram([
+        buildAnnotatedClassDecl(
+          'UserController', ['public'],
+          [{ name: 'RestController', marker: true }],
+          0, 20,
+        ),
+      ]);
+      const { symbols } = visitJava(root, '');
+      const cls = symbols.find((s) => s.name === 'UserController');
+      expect(cls).toBeDefined();
+      expect(cls!.metadata).toEqual({ annotations: ['RestController'] });
+    });
+
+    it('extracts multiple annotations from a single method', () => {
+      const method = buildAnnotatedMethodDecl(
+        'createUser', ['public'],
+        [
+          { name: 'PostMapping', marker: false },
+          { name: 'ResponseBody', marker: true },
+        ],
+        10, 20,
+      );
+      const root = buildProgram([
+        buildClassDecl('UserController', ['public'], 5, 25, [method]),
+      ]);
+      const { symbols } = visitJava(root, '');
+      const m = symbols.find((s) => s.name === 'createUser');
+      expect(m).toBeDefined();
+      expect(m!.metadata).toEqual({
+        parentClass: 'UserController',
+        annotations: ['PostMapping', 'ResponseBody'],
+      });
+    });
+
+    it('omits annotations key when no annotations are present', () => {
+      const method = buildMethodDecl('plainMethod', ['public'], 10, 12);
+      const root = buildProgram([
+        buildClassDecl('Service', ['public'], 5, 15, [method]),
+      ]);
+      const { symbols } = visitJava(root, '');
+      const m = symbols.find((s) => s.name === 'plainMethod');
+      expect(m).toBeDefined();
+      expect(m!.metadata).toEqual({ parentClass: 'Service' });
+      expect(m!.metadata).not.toHaveProperty('annotations');
+    });
+
+    it('extracts annotations from multiple fields in a single declaration', () => {
+      const field = buildAnnotatedFieldDecl(
+        ['host', 'port'], ['private'],
+        [{ name: 'Value', marker: false }],
+        10, 10,
+      );
+      const root = buildProgram([
+        buildClassDecl('Config', ['public'], 5, 20, [field]),
+      ]);
+      const { symbols } = visitJava(root, '');
+      const host = symbols.find((s) => s.name === 'host');
+      const port = symbols.find((s) => s.name === 'port');
+      expect(host!.metadata).toEqual({
+        parentClass: 'Config',
+        annotations: ['Value'],
+      });
+      expect(port!.metadata).toEqual({
+        parentClass: 'Config',
+        annotations: ['Value'],
+      });
+    });
+  });
+
   // -------------------------------------------------------------------------
   // Golden fixture comparison against expected.json
   //

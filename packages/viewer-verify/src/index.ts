@@ -1,6 +1,7 @@
 // Classes
 export { VerificationEngine } from './verification-engine.js';
 export { RulesEngine, checkInvariants } from './rules-engine.js';
+export type { BoundaryContext } from './rules-engine.js';
 
 // Rule model functions
 export {

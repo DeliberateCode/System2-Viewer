@@ -24,11 +24,11 @@ import { COMMANDS } from '../cli-commands.js';
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 describe('Phase 2 contract: MCP tool surface unchanged', () => {
-  it('MCP tool count is exactly 21', () => {
-    expect(TOOL_TABLE).toHaveLength(21);
+  it('MCP tool count is exactly 22', () => {
+    expect(TOOL_TABLE).toHaveLength(22);
   });
 
-  it('all 21 expected tool names are present', () => {
+  it('all 22 expected tool names are present', () => {
     const names = new Set(TOOL_TABLE.map((t) => t.name));
 
     const EXPECTED_TOOLS = [
@@ -53,6 +53,7 @@ describe('Phase 2 contract: MCP tool surface unchanged', () => {
       'viewer.confirmSubsystem',
       'viewer.rejectSubsystem',
       'viewer.annotateSubsystem',
+      'viewer.getImportGraph',
     ];
 
     for (const tool of EXPECTED_TOOLS) {
@@ -61,21 +62,20 @@ describe('Phase 2 contract: MCP tool surface unchanged', () => {
     expect(names.size).toBe(EXPECTED_TOOLS.length);
   });
 
-  it('no new tools were added beyond the 21 Phase 1 tools', () => {
-    // If this fails, a new tool was added which violates the contract
+  it('no new tools were added beyond the 22 Phase 6 tools', () => {
     const names = TOOL_TABLE.map((t) => t.name);
-    expect(names.length).toBe(21);
+    expect(names.length).toBe(22);
   });
 });
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 describe('Phase 2 contract: CLI command surface unchanged', () => {
-  it('CLI command count is exactly 21', () => {
-    expect(COMMANDS).toHaveLength(21);
+  it('CLI command count is exactly 22', () => {
+    expect(COMMANDS).toHaveLength(22);
   });
 
-  it('all 21 expected command names are present', () => {
+  it('all 22 expected command names are present', () => {
     const names = new Set(COMMANDS.map((c) => c.name));
 
     const EXPECTED_COMMANDS = [
@@ -99,6 +99,7 @@ describe('Phase 2 contract: CLI command surface unchanged', () => {
       'reject',
       'annotate',
       'claim-create',
+      'import-graph',
       'rule',
     ];
 

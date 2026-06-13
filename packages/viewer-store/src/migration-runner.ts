@@ -4,6 +4,7 @@ import { migration002 } from './migrations/002-embeddings.js';
 import { migration003 } from './migrations/003-file-hashes.js';
 import { migration004 } from './migrations/004-file-hash-stat.js';
 import { migration005 } from './migrations/005-query-indexes.js';
+import { migration006 } from './migrations/006-epistemic-declared.js';
 
 export interface Migration {
   version: number;
@@ -19,7 +20,7 @@ export interface MigrationStatus {
   applied: Array<{ version: number; name: string; applied_at: string }>;
 }
 
-const MIGRATIONS: readonly Migration[] = [migration001, migration002, migration003, migration004, migration005];
+const MIGRATIONS: readonly Migration[] = [migration001, migration002, migration003, migration004, migration005, migration006];
 
 const SCHEMA_MIGRATIONS_DDL = `
 CREATE TABLE IF NOT EXISTS schema_migrations (

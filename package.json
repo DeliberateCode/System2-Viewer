@@ -1,6 +1,6 @@
 {
   "name": "system2-viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,7 +13,7 @@
     "build": "tsc -b",
     "clean": "rm -rf packages/*/dist packages/*/*.tsbuildinfo tsconfig.tsbuildinfo",
     "test": "vitest run",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc -b",
     "typecheck:tests": "tsc -p tsconfig.typecheck-tests.json",
     "boundary-check": "tsx tools/boundary-check/index.ts",
     "bench": "tsx packages/viewer-bench/src/run-bench.ts",

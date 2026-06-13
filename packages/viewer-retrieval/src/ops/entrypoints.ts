@@ -5,6 +5,7 @@
  * Returns ranked candidates with evidence refs.
  */
 
+import picomatch from 'picomatch';
 import type { EntrypointReadHandle } from '../handles.js';
 import type {
   ResultEnvelope,
@@ -16,10 +17,47 @@ import { buildEnvelope } from '../envelope.js';
 import { assertStructured } from '../envelope.js';
 import { runRetrievalPipeline } from '../pipeline.js';
 
+interface FrameworkHintInput {
+  pattern: string;
+  framework: string;
+  entrypointKind: string;
+  excludePaths?: string[];
+}
+
+// Intentional duplication of viewer-config's extractDecoratorNames —
+// viewer-retrieval does not depend on viewer-config.
+function extractDecoratorNames(metadataJson: string | null): string[] {
+  if (!metadataJson) return [];
+  try {
+    const meta = JSON.parse(metadataJson) as Record<string, unknown>;
+    const names: string[] = [];
+    if (Array.isArray(meta.decorators)) {
+      for (const d of meta.decorators) if (typeof d === 'string') names.push(d);
+    }
+    if (Array.isArray(meta.attributes)) {
+      for (const a of meta.attributes) if (typeof a === 'string') names.push(a);
+    }
+    if (Array.isArray(meta.annotations)) {
+      for (const a of meta.annotations) if (typeof a === 'string') names.push(a);
+    }
+    return names;
+  } catch {
+    return [];
+  }
+}
+
+function matchesHintPattern(pattern: string, decoratorName: string): boolean {
+  if (pattern.endsWith('.*')) {
+    const prefix = pattern.slice(0, -1);
+    return decoratorName.startsWith(prefix);
+  }
+  return decoratorName === pattern;
+}
+
 export function findEntrypoints(
   handle: EntrypointReadHandle,
   query: string,
-  opts?: { revision?: string; limit?: number },
+  opts?: { revision?: string; limit?: number; frameworkHints?: FrameworkHintInput[] },
 ): ResultEnvelope<EntrypointResult> {
   const revision = opts?.revision ?? 'latest';
   const limit = opts?.limit ?? 20;
@@ -107,6 +145,70 @@ export function findEntrypoints(
 
     evidence.push(...candidateEvidence);
     seen.add(anchor.id);
+  }
+
+  // Framework-hint matching stage: scan decorated symbol nodes for pattern matches.
+  if (opts?.frameworkHints && opts.frameworkHints.length > 0) {
+    const excludeMatcherCache = new Map<FrameworkHintInput, ReturnType<typeof picomatch>>();
+    for (const hint of opts.frameworkHints) {
+      if (hint.excludePaths) {
+        excludeMatcherCache.set(hint, picomatch(hint.excludePaths, { dot: true }));
+      }
+    }
+
+    // Use decoratedSymbols() when available for efficient scanning.
+    // Falls back to FTS-based discovery.
+    const symbolEntries: Array<{ id: string; metadataJson: string; path: string | null }> = [];
+    if (handle.decoratedSymbols) {
+      symbolEntries.push(...handle.decoratedSymbols());
+    } else {
+      const ftsHits = handle.ftsSearch(query);
+      for (const hit of ftsHits) {
+        const node = handle.getNode(hit.objectId);
+        if (!node || node['kind'] !== 'symbol') continue;
+        const mj = (node['metadata_json'] as string) ?? null;
+        if (mj) symbolEntries.push({ id: hit.objectId, metadataJson: mj, path: (node['path'] as string) ?? null });
+      }
+    }
+
+    for (const entry of symbolEntries) {
+      if (candidates.length >= limit) break;
+      if (seen.has(entry.id)) continue;
+
+      const decorators = extractDecoratorNames(entry.metadataJson);
+      if (decorators.length === 0) continue;
+
+      const filePath = entry.path ?? '';
+
+      for (const hint of opts.frameworkHints) {
+        const excludeMatcher = excludeMatcherCache.get(hint);
+        if (excludeMatcher && excludeMatcher(filePath)) continue;
+
+        const matched = decorators.some((d) => matchesHintPattern(hint.pattern, d));
+        if (matched) {
+          const node = handle.getNode(entry.id);
+          const hintEvidence: EvidenceRef[] = [{
+            evidenceId: `fwk-hint:${entry.id}:${hint.pattern}`,
+            kind: 'symbol_index_hit',
+            path: filePath,
+            revision,
+            extractor: `framework-hint:${hint.framework}`,
+          }];
+
+          candidates.push({
+            nodeId: entry.id,
+            displayName: node ? ((node['display_name'] as string) ?? filePath) : filePath,
+            score: 70,
+            evidence: hintEvidence,
+            source: 'framework-hint',
+            entrypointKind: hint.entrypointKind,
+          });
+          evidence.push(...hintEvidence);
+          seen.add(entry.id);
+          break;
+        }
+      }
+    }
   }
 
   // If no candidates found and query was non-empty, note the uncertainty

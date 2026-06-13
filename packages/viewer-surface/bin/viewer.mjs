@@ -108,6 +108,7 @@ if (argv.includes('serve')) {
       verifyClaim: (a) => engine.verifyClaim(a),
       buildClaimPayload: (a) => engine.buildClaimPayload(a),
       sampleEvidenceAgreement: (a) => engine.sampleEvidenceAgreement(a),
+      getImportGraph: (a) => engine.getImportGraph(a),
 
       // Special operations
       feedback: engine.feedback,

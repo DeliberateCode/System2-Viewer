@@ -56,6 +56,7 @@ function createMockOps(): CliOps {
     getClaimHistory: vi.fn(() => makeEnvelope('getClaimHistory', { claimId: 'c1', verificationHistory: [], annotations: [], successorChain: [] })),
     compareRevisions: vi.fn(() => makeEnvelope('compareRevisions', { revA: 'a', revB: 'b', changedFiles: [], renames: [] })),
     createCustomClaim: vi.fn(() => makeEnvelope('createCustomClaim', { claimId: 'claim::custom::test' })),
+    getImportGraph: vi.fn(() => makeEnvelope('getImportGraph', { adjacencyList: {}, nodes: [], metrics: { totalNodes: 0, totalEdges: 0, maxFanIn: 0, maxFanOut: 0, avgFanOut: 0 } })),
     doctor: vi.fn(() => makeEnvelope('doctor', { nodeVersion: 'v22.0.0', sqliteBinding: true })),
     status: vi.fn(() => makeEnvelope('status', { modelRevision: 'rev-1', readinessState: 'ready' })),
     initConfig: vi.fn(() => ({ configPath: '/tmp/viewer.config.json', created: true, existed: false })),
@@ -73,11 +74,11 @@ describe('COMMANDS table', () => {
     'overview', 'entrypoints', 'trace', 'blast', 'subsystem',
     'resolve', 'claims', 'uncertainties', 'verify', 'history',
     'check-invariants', 'confirm', 'reject', 'annotate',
-    'claim-create', 'rule',
+    'claim-create', 'import-graph', 'rule',
   ];
 
-  it('has exactly 21 commands', () => {
-    expect(COMMANDS).toHaveLength(21);
+  it('has exactly 22 commands', () => {
+    expect(COMMANDS).toHaveLength(22);
   });
 
   it('names match stable contract', () => {

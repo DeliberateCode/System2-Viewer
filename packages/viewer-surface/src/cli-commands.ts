@@ -54,7 +54,7 @@ function validateWorkspaceMode(value: string | undefined): 'auto' | 'force' | 'o
   throw new Error(`Invalid value for --workspace: expected auto|force|off, got "${value}"`);
 }
 
-/** All 20 CLI commands. */
+/** All 22 CLI commands. */
 export const COMMANDS: CommandDef[] = [
   // --- Diagnostic / setup ---
   {
@@ -150,6 +150,7 @@ export const COMMANDS: CommandDef[] = [
       targetOrIntent: requirePositional(rest, 1, 'target'),
       maxDepth: parseOptionalInt(flags, 'max-depth'),
       prefer: flags['prefer'] as 'tests' | 'docs' | undefined,
+      edgeKinds: flags['edge-kinds'] ? flags['edge-kinds'].split(',').map(s => s.trim()) : undefined,
     }),
     viewKind: 'trace',
   },
@@ -303,6 +304,20 @@ export const COMMANDS: CommandDef[] = [
         actor: flags['actor'] ?? 'cli-user',
       };
     },
+    viewKind: 'generic',
+  },
+
+  // --- Import graph ---
+  {
+    name: 'import-graph',
+    opKey: 'getImportGraph',
+    preDispatch: null,
+    args: (rest, flags) => ({
+      scope: rest[0] ?? '*',
+      detectCycles: flags['detect-cycles'] !== undefined,
+      transitiveDeps: flags['transitive-deps'] !== undefined,
+      maxCycles: parseOptionalInt(flags, 'max-cycles') ?? 100,
+    }),
     viewKind: 'generic',
   },
 

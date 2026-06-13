@@ -42,7 +42,7 @@ CREATE INDEX IF NOT EXISTS idx_nodes_repo_kind ON nodes(repository_id, kind, val
 CREATE TABLE IF NOT EXISTS edges (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL REFERENCES kind_registry(kind),
-  epistemic TEXT NOT NULL CHECK(epistemic IN ('static','inferred','observed')),
+  epistemic TEXT NOT NULL CHECK(epistemic IN ('static','inferred','observed','declared')),
   from_node_id TEXT NOT NULL,
   to_node_id TEXT NOT NULL,
   repository_id TEXT NOT NULL,
@@ -199,7 +199,10 @@ INSERT OR IGNORE INTO kind_registry (kind, category, mvp_emitted) VALUES
   ('git_commit', 'evidence', 1),
   ('llm_derivation', 'evidence', 1),
   ('runtime_trace', 'evidence', 0),
-  ('embedding_similarity', 'evidence', 0);
+  ('embedding_similarity', 'evidence', 0),
+  -- System-generated kinds (required at insert time, unlike reserved-name-only claim types)
+  ('event-flow', 'edge', 0),
+  ('boundary-violation', 'claim_type', 0);
 `;
 
 export const REVISION_SCOPED_TABLES: readonly string[] = [

@@ -2,8 +2,16 @@
  * Tests for doctor utilities -- secret redaction and REDACTED sentinel.
  *
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+
+vi.mock('@system2-viewer/viewer-indexer', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@system2-viewer/viewer-indexer')>();
+  return {
+    ...original,
+    probeEmbedderStatus: vi.fn(async () => ({ status: 'not_installed' as const })),
+  };
+});
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
@@ -376,17 +384,19 @@ describe('buildDoctorReport schemaMigration', () => {
         VALUES (4, '004-file-hash-stat', '2026-01-04T00:00:00Z');
       INSERT INTO schema_migrations (version, name, applied_at)
         VALUES (5, '005-query-indexes', '2026-01-05T00:00:00Z');
+      INSERT INTO schema_migrations (version, name, applied_at)
+        VALUES (6, '006-expand-edges-epistemic-declared', '2026-01-06T00:00:00Z');
     `);
-    db.pragma('user_version = 5');
+    db.pragma('user_version = 6');
     db.close();
 
     const report = await buildDoctorReport({ dataDir: tmpDir, repoRoot: tmpDir });
 
     expect(report.schemaMigration).toBeDefined();
-    expect(report.schemaMigration!.currentVersion).toBe(5);
-    expect(report.schemaMigration!.latestVersion).toBe(5);
+    expect(report.schemaMigration!.currentVersion).toBe(6);
+    expect(report.schemaMigration!.latestVersion).toBe(6);
     expect(report.schemaMigration!.pendingMigrations).toBe(0);
-    expect(report.schemaMigration!.appliedMigrations).toHaveLength(5);
+    expect(report.schemaMigration!.appliedMigrations).toHaveLength(6);
   });
 
   it('omits schemaMigration when model.sqlite does not exist', async () => {

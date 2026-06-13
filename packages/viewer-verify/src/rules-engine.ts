@@ -40,17 +40,16 @@ export class RulesEngine {
    */
   checkInvariants(
     handle: RulesReadHandle,
-    options?: { scope?: ScopeFilter },
+    options?: { scope?: ScopeFilter; boundaryContext?: BoundaryContext; importEdges?: Array<{ fromPath: string; toPath: string }> },
   ): InvariantCheckResult {
     const violations: RuleViolation[] = [];
+    const importEdges = options?.importEdges ?? handle.allImportEdges?.() ?? [];
 
     for (const rule of this._explicitRules) {
       // Runtime backstop: defense-in-depth
       neverAutoEnforceGuard(rule);
 
       if (rule.definition.type === 'forbidden_import') {
-        const importEdges = handle.allImportEdges?.() ?? [];
-
         for (const edge of importEdges) {
           // Apply scope filter if provided
           if (options?.scope?.path) {
@@ -62,7 +61,7 @@ export class RulesEngine {
             }
           }
 
-          if (matchForbiddenImport(rule, edge.fromPath, edge.toPath)) {
+          if (matchForbiddenImport(rule, edge.fromPath, edge.toPath, options?.boundaryContext)) {
             violations.push({
               ruleId: rule.id,
               ruleName: rule.name,
@@ -106,15 +105,84 @@ export class RulesEngine {
   }
 }
 
+export interface BoundaryContext {
+  fileToBoundary: Map<string, { boundaryName: string; isPublic: boolean }>;
+  boundaries: Map<string, { publicFiles: Set<string>; allowedDependencies?: string[] }>;
+}
+
 /**
- * Standalone wrapper that runs checkInvariants and produces a ResultEnvelope.
+ * Standalone envelope-producing wrapper around RulesEngine.checkInvariants.
+ * Not to be confused with the class method — this function adds boundary
+ * violation detection and wraps the result in a ResultEnvelope.
  */
 export function checkInvariants(
   engine: RulesEngine,
   handle: RulesReadHandle,
-  options?: { scope?: ScopeFilter; txn?: RuleWriteTxn },
+  options?: { scope?: ScopeFilter; txn?: RuleWriteTxn; boundaryContext?: BoundaryContext },
 ): ResultEnvelope<InvariantCheckResult> {
-  const result = engine.checkInvariants(handle, options);
+  const importEdges = handle.allImportEdges?.() ?? [];
+  const result = engine.checkInvariants(handle, { ...options, importEdges });
+
+  if (options?.boundaryContext) {
+    const bc = options.boundaryContext;
+    let boundaryChecks = 0;
+
+    for (const edge of importEdges) {
+      if (options?.scope?.path) {
+        if (!edge.fromPath.startsWith(options.scope.path) && !edge.toPath.startsWith(options.scope.path)) {
+          continue;
+        }
+      }
+
+      const fromMembership = bc.fileToBoundary.get(edge.fromPath);
+      const toMembership = bc.fileToBoundary.get(edge.toPath);
+
+      if (!fromMembership || !toMembership) continue;
+      if (fromMembership.boundaryName === toMembership.boundaryName) continue;
+
+      const toBoundary = bc.boundaries.get(toMembership.boundaryName);
+      if (!toBoundary) continue;
+
+      const fromBoundary = bc.boundaries.get(fromMembership.boundaryName);
+
+      boundaryChecks++;
+
+      if (fromBoundary?.allowedDependencies && !fromBoundary.allowedDependencies.includes(toMembership.boundaryName)) {
+        result.violations.push({
+          ruleId: `boundary:${fromMembership.boundaryName}:disallowed-dep:${toMembership.boundaryName}`,
+          ruleName: `boundary-dependency:${fromMembership.boundaryName}->${toMembership.boundaryName}`,
+          ruleType: 'forbidden_import',
+          fromPath: edge.fromPath,
+          toPath: edge.toPath,
+          severity: 'warning',
+          evidence: [{
+            kind: 'static_analysis_result',
+            path: edge.fromPath,
+            description: `Boundary "${fromMembership.boundaryName}" is not allowed to depend on boundary "${toMembership.boundaryName}"`,
+          }],
+        });
+      }
+
+      if (!toMembership.isPublic) {
+        result.violations.push({
+          ruleId: `boundary:${toMembership.boundaryName}:non-public-import`,
+          ruleName: `boundary-violation:${fromMembership.boundaryName}->${toMembership.boundaryName}`,
+          ruleType: 'forbidden_import',
+          fromPath: edge.fromPath,
+          toPath: edge.toPath,
+          severity: 'warning',
+          evidence: [{
+            kind: 'static_analysis_result',
+            path: edge.fromPath,
+            description: `Import from "${fromMembership.boundaryName}" to non-public file in "${toMembership.boundaryName}"`,
+          }],
+        });
+      }
+    }
+
+    result.rulesChecked += boundaryChecks;
+    result.passed = result.violations.length === 0;
+  }
 
   return buildEnvelope<InvariantCheckResult>({
     op: 'checkInvariants',

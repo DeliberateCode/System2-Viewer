@@ -137,6 +137,7 @@ export interface ViewerOperations {
   verifyClaim(args: Record<string, unknown>): ResultEnvelope<VerificationResult>;
   buildClaimPayload(args: Record<string, unknown>): ResultEnvelope<unknown>;
   sampleEvidenceAgreement(args: Record<string, unknown>): ResultEnvelope<unknown>;
+  getImportGraph(args: Record<string, unknown>): ResultEnvelope<unknown>;
 }
 
 /** Result of the `init` command. */
@@ -240,6 +241,21 @@ export interface DoctorReport {
     available: number;
   };
   absolutePathsDetected?: boolean;
+  frameworkHints?: {
+    configured: number;
+    defaultActive: number;
+    overlayContributed: number;
+    totalPatterns: number;
+  };
+  boundaryDrift?: {
+    undeclaredPublicApis: number;
+    unusedPublicApis: number;
+  };
+  topologyHintsStatus?: {
+    configured: number;
+    resolved: number;
+    unresolved: number;
+  };
   suggestions: DoctorSuggestion[];
   schemaMigration?: {
     currentVersion: number;
@@ -253,6 +269,11 @@ export interface DoctorReport {
 export interface DoctorOpts {
   dataDir?: string;
   repoRoot?: string;
+  frameworkHintCount?: number;
+  defaultHintCount?: number;
+  topologyHintCount?: number;
+  topologyResolvedCount?: number;
+  topologyUnresolvedCount?: number;
 }
 
 /** Status report result type. */

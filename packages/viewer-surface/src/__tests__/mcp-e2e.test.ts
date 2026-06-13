@@ -171,7 +171,7 @@ describe('MCP E2E dispatch (no stdio transport)', () => {
 
     // Server is registered and ready for invoke
     const partition = server.toolPartition();
-    expect(partition.length).toBe(21);
+    expect(partition.length).toBe(22);
   });
 
   it('viewer.doctor returns a valid structured envelope', async () => {

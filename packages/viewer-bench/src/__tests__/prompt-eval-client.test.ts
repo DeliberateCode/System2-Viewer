@@ -9,14 +9,14 @@
  *
  * No actual Anthropic API calls are made (would require a real key).
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import type {
   PromptEvalClient,
   PromptEvalResponse,
   ToolCall,
   ToolDefinition,
 } from '../evals/prompt-eval-client.js';
-import { createAnthropicClient } from '../evals/anthropic-adapter.js';
+import { createAnthropicClient, _internals as _adapterInternals } from '../evals/anthropic-adapter.js';
 
 /** A mock PromptEvalClient that returns canned responses. */
 function createMockClient(
@@ -110,8 +110,14 @@ describe('ToolDefinition shape', () => {
 describe('createAnthropicClient', () => {
   const originalEnv = process.env.EVAL_LLM_API_KEY;
 
+  beforeEach(() => {
+    _adapterInternals.resetSdkCache();
+    vi.spyOn(_adapterInternals, 'importSdk').mockResolvedValue(null);
+  });
+
   afterEach(() => {
-    // Restore original env state
+    vi.restoreAllMocks();
+    _adapterInternals.resetSdkCache();
     if (originalEnv !== undefined) {
       process.env.EVAL_LLM_API_KEY = originalEnv;
     } else {

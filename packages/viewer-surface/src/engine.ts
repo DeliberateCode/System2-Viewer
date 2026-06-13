@@ -19,9 +19,9 @@ import { ModelStore } from '@system2-viewer/viewer-store';
 import { deriveRepositoryId, NULL_LOGGER } from '@system2-viewer/viewer-core';
 import type { Logger } from '@system2-viewer/viewer-core';
 import type { ReadHandle } from '@system2-viewer/viewer-store';
-import { loadConfig, buildExcludeSet } from '@system2-viewer/viewer-config';
+import { loadConfig, buildExcludeSet, DEFAULT_FRAMEWORK_HINTS } from '@system2-viewer/viewer-config';
 import type { ViewerConfig, RuleDef } from '@system2-viewer/viewer-config';
-import { Indexer, tryLoadEmbedder } from '@system2-viewer/viewer-indexer';
+import { Indexer, tryLoadEmbedder, resolveBoundaryMembership } from '@system2-viewer/viewer-indexer';
 // inferDefaultLayerRules is available for computing inferred candidates
 // after indexing; currently deferred until indexed data exists.
 import {
@@ -35,6 +35,7 @@ import {
   buildEnvelope,
   buildClaimPayload,
   sampleEvidenceAgreement,
+  getImportGraph,
 } from '@system2-viewer/viewer-retrieval';
 import type { ResultEnvelope, ExtractionQuality } from '@system2-viewer/viewer-retrieval';
 import {
@@ -44,6 +45,7 @@ import {
   loadExplicitRules,
 } from '@system2-viewer/viewer-verify';
 import type {
+  BoundaryContext,
   EnforceableRule,
   InferredCandidateRule,
   RuleDefinition,
@@ -471,6 +473,7 @@ function createOperationDispatcher(
     gitHistoryDepth: config.indexing.gitHistoryDepth,
     symbolBackend: config.indexing.symbolBackend,
     excludes: config.repository.exclude ?? [],
+    topologyHints: config.topologyHints,
   }, excludeMatcher, logger);
 
   const indexer: IndexerLike = {
@@ -487,6 +490,7 @@ function createOperationDispatcher(
         gitHistoryDepth: targetConfig.indexing.gitHistoryDepth,
         symbolBackend: targetConfig.indexing.symbolBackend,
         excludes: targetConfig.repository.exclude ?? [],
+        topologyHints: targetConfig.topologyHints,
       });
 
       const result = await rawIndexer.index({
@@ -545,9 +549,54 @@ function createOperationDispatcher(
             }
           }
 
+          let boundaryContexts: { declared: number; totalFiles: number; coveragePercent: number; violationCount: number } | undefined;
+          if (config.moduleBoundaries && config.moduleBoundaries.length > 0 && state.readonlyDb) {
+            const fileRows = state.readonlyDb.prepare(
+              `SELECT path FROM nodes WHERE kind = 'file' AND valid_to_revision IS NULL AND path IS NOT NULL`,
+            ).all() as Array<{ path: string }>;
+            const filePaths = fileRows.map(r => r.path);
+            const resolved = resolveBoundaryMembership(config.moduleBoundaries, filePaths);
+            boundaryContexts = {
+              declared: config.moduleBoundaries.length,
+              totalFiles: filePaths.length,
+              coveragePercent: filePaths.length > 0
+                ? Math.round((resolved.fileToBoundary.size / filePaths.length) * 100)
+                : 0,
+              violationCount: 0,
+            };
+          }
+
+          let eventTopology: { channels: number; edges: number; transports: string[]; unresolvedHints: number } | undefined;
+          if (state.readonlyDb) {
+            const efRows = state.readonlyDb.prepare(
+              `SELECT metadata_json FROM edges WHERE kind = 'event-flow' AND valid_to_revision IS NULL`,
+            ).all() as Array<{ metadata_json: string | null }>;
+            if (efRows.length > 0) {
+              const channels = new Set<string>();
+              const transports = new Set<string>();
+              for (const row of efRows) {
+                if (row.metadata_json) {
+                  try {
+                    const meta = JSON.parse(row.metadata_json) as Record<string, unknown>;
+                    if (typeof meta.channel === 'string') channels.add(meta.channel);
+                    if (typeof meta.transport === 'string') transports.add(meta.transport);
+                  } catch { /* ignore */ }
+                }
+              }
+              eventTopology = {
+                channels: channels.size,
+                edges: efRows.length,
+                transports: Array.from(transports).sort(),
+                unresolvedHints: 0,
+              };
+            }
+          }
+
           return getRepositoryOverview(handle, repoNodeId, {
             revision: rev,
             maxDepth: args['maxDepth'] as number | undefined,
+            boundaryContexts,
+            eventTopology,
           });
         }),
       );
@@ -559,6 +608,7 @@ function createOperationDispatcher(
           return findEntrypoints(handle, args['query'] as string, {
             revision: rev,
             limit: args['limit'] as number | undefined,
+            frameworkHints: config.frameworkHints ?? [...DEFAULT_FRAMEWORK_HINTS],
           });
         }),
       );
@@ -571,6 +621,7 @@ function createOperationDispatcher(
             revision: rev,
             maxDepth: args['maxDepth'] as number | undefined,
             prefer: args['prefer'] as 'tests' | 'docs' | undefined,
+            edgeKinds: args['edgeKinds'] as string[] | undefined,
           });
         }),
       );
@@ -626,8 +677,25 @@ function createOperationDispatcher(
     checkInvariants(args: Record<string, unknown>) {
       return withTiming('checkInvariants', logger, () =>
         withRead(store, state.readonlyDb, undefined, (handle) => {
+          let boundaryContext: BoundaryContext | undefined;
+          if (config.moduleBoundaries && config.moduleBoundaries.length > 0 && state.readonlyDb) {
+            const fileRows = state.readonlyDb.prepare(
+              `SELECT path FROM nodes WHERE kind = 'file' AND valid_to_revision IS NULL AND path IS NOT NULL`,
+            ).all() as Array<{ path: string }>;
+            const filePaths = fileRows.map(r => r.path);
+            const resolved = resolveBoundaryMembership(config.moduleBoundaries, filePaths);
+            const boundaries = new Map<string, { publicFiles: Set<string>; allowedDependencies?: string[] }>();
+            for (const [name, info] of resolved.boundaries) {
+              boundaries.set(name, {
+                publicFiles: info.publicFiles,
+                allowedDependencies: info.def.allowedDependencies,
+              });
+            }
+            boundaryContext = { fileToBoundary: resolved.fileToBoundary, boundaries };
+          }
           return verifyCheckInvariants(state.rulesEngine, handle, {
             scope: args['scope'] as { repositoryId?: string; path?: string; subsystemId?: string } | undefined,
+            boundaryContext,
           });
         }),
       );
@@ -730,6 +798,19 @@ function createOperationDispatcher(
             extractionQuality: deriveExtractionQuality(state.readonlyDb, rev, config.indexing.symbolBackend),
             suggestedNextCalls: [],
             modelRevision: rev,
+          });
+        }),
+      );
+    },
+
+    getImportGraph(args: Record<string, unknown>) {
+      return withTiming('getImportGraph', logger, () =>
+        withRead(store, state.readonlyDb, undefined, (handle, rev) => {
+          return getImportGraph(handle, {
+            scope: (args['scope'] as string) ?? '*',
+            detectCycles: args['detectCycles'] as boolean | undefined,
+            transitiveDeps: args['transitiveDeps'] as boolean | undefined,
+            maxCycles: (args['maxCycles'] as number | undefined) ?? 100,
           });
         }),
       );
@@ -876,9 +957,32 @@ function createOperationDispatcher(
     },
 
     async doctor() {
+      let topologyResolvedCount = 0;
+      let topologyUnresolvedCount = 0;
+      const topologyTotal = config.topologyHints?.length ?? 0;
+      if (topologyTotal > 0 && state.readonlyDb) {
+        const rev = latestRevision(state.readonlyDb);
+        if (rev) {
+          const readH = store.read(rev);
+          try {
+            const partials = readH.partiality(rev);
+            topologyUnresolvedCount = partials.filter(
+              (p: { scope: string }) => p.scope.startsWith('topology_hint:'),
+            ).length;
+          } finally {
+            readH.close();
+          }
+          topologyResolvedCount = topologyTotal - topologyUnresolvedCount;
+        }
+      }
       const report: DoctorReport = await buildDoctorReport({
         dataDir,
         repoRoot,
+        frameworkHintCount: config.frameworkHints?.length ?? 0,
+        defaultHintCount: config.frameworkHints ? 0 : DEFAULT_FRAMEWORK_HINTS.length,
+        topologyHintCount: topologyTotal,
+        topologyResolvedCount,
+        topologyUnresolvedCount,
       });
       const data = engineWarnings.length > 0
         ? { ...report, engineWarnings }
