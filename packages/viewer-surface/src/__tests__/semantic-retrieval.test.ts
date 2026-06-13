@@ -72,7 +72,7 @@ function createMockDb(): any {
 
 describe('Semantic retrieval: ONNX not installed graceful degradation', () => {
   it('semantic stage returns [] when handle has no semanticSearch method', () => {
-    // A handle without semanticSearch (legacy/Phase 1 shape)
+    // A handle without semanticSearch (legacy shape)
     const handle = {
       neighbors: vi.fn(() => []),
       ftsSearch: vi.fn(() => []),

@@ -6,12 +6,12 @@ import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 
 function makeTempDir(): string {
-  const dir = join(tmpdir(), `viewer-p6-cfg-${randomUUID()}`);
+  const dir = join(tmpdir(), `viewer-struct-cfg-${randomUUID()}`);
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
-describe('Phase 6 config: frameworkHints validation', () => {
+describe('frameworkHints validation', () => {
   it('loads valid frameworkHints without errors', () => {
     const dir = makeTempDir();
     writeFileSync(join(dir, 'viewer.config.json'), JSON.stringify({
@@ -55,7 +55,7 @@ describe('Phase 6 config: frameworkHints validation', () => {
   });
 });
 
-describe('Phase 6 config: moduleBoundaries validation', () => {
+describe('moduleBoundaries validation', () => {
   it('loads valid moduleBoundaries without errors', () => {
     const dir = makeTempDir();
     writeFileSync(join(dir, 'viewer.config.json'), JSON.stringify({
@@ -115,7 +115,7 @@ describe('Phase 6 config: moduleBoundaries validation', () => {
   });
 });
 
-describe('Phase 6 config: topologyHints validation', () => {
+describe('topologyHints validation', () => {
   it('loads valid topologyHints without errors', () => {
     const dir = makeTempDir();
     writeFileSync(join(dir, 'viewer.config.json'), JSON.stringify({
@@ -144,7 +144,7 @@ describe('Phase 6 config: topologyHints validation', () => {
   });
 });
 
-describe('Phase 6 config: default framework hints', () => {
+describe('default framework hints', () => {
   it('DEFAULT_FRAMEWORK_HINTS contains Flask, FastAPI, Django, Spring patterns', () => {
     const frameworks = new Set(DEFAULT_FRAMEWORK_HINTS.map(h => h.framework));
     expect(frameworks.has('flask')).toBe(true);
@@ -161,7 +161,7 @@ describe('Phase 6 config: default framework hints', () => {
   });
 });
 
-describe('Phase 6: extractDecoratorNames', () => {
+describe('extractDecoratorNames', () => {
   it('extracts Python decorators', () => {
     const meta = JSON.stringify({ decorators: ['app.route', 'login_required'] });
     expect(extractDecoratorNames(meta)).toEqual(['app.route', 'login_required']);
@@ -196,13 +196,13 @@ describe('Phase 6: extractDecoratorNames', () => {
   });
 });
 
-describe('Phase 6: BUILT_IN_CLAIM_TYPES includes boundary-violation', () => {
+describe('BUILT_IN_CLAIM_TYPES includes boundary-violation', () => {
   it('boundary-violation is a built-in claim type', () => {
     expect(BUILT_IN_CLAIM_TYPES.has('boundary-violation')).toBe(true);
   });
 });
 
-describe('Phase 6 config: sanitization', () => {
+describe('config sanitization', () => {
   it('truncates long boundary names to 256 chars', () => {
     const dir = makeTempDir();
     const longName = 'a'.repeat(300);
@@ -219,7 +219,7 @@ describe('Phase 6 config: sanitization', () => {
     rmSync(dir, { recursive: true });
   });
 
-  it('configs without new keys behave identically to Phase 5', () => {
+  it('configs without structural keys behave identically to base config', () => {
     const dir = makeTempDir();
     writeFileSync(join(dir, 'viewer.config.json'), JSON.stringify({ version: 1 }));
     const result = loadConfigResult(dir);

@@ -166,7 +166,7 @@
       ]
     },
     "viewer-config": {
-      "description": "Configuration loading from viewer.config.json, exclude pattern merging, schema validation, defaults. Zero workspace imports. Phase 3: gains claimTypes and RuleDef.enabled. Phase 4: gains indexing.workerCount, indexing.workerMinFiles, indexing.sqlite. Phase 5: gains picomatch for glob compilation (replaces hand-rolled globToRegex), gains indexing.sqlite.busyTimeout.",
+      "description": "Configuration loading from viewer.config.json, exclude pattern merging, schema validation, defaults. Zero workspace imports. Includes claimTypes, RuleDef.enabled, indexing.workerCount, indexing.workerMinFiles, indexing.sqlite, picomatch glob compilation, indexing.sqlite.busyTimeout.",
       "public_exports": [
         {
           "name": "loadConfig",
@@ -324,7 +324,7 @@
       ]
     },
     "viewer-store": {
-      "description": "SQLite persistence: schema DDL, versioned migration runner, ModelStore, ReadHandle, SnapshotTxn, FTS5 helper, kind registry seed. Imports viewer-core for shared types. Phase 3: gains embeddings table, upsertEmbedding, semanticSearch, embeddingCoverage. Phase 4: gains file_hashes table, schema_migrations table, upsertFileHash, loadFileHashes, getMigrationStatus, configurable PRAGMAs. Phase 5: gains busy_timeout PRAGMA (configurable via SqlitePragmaOpts.busyTimeout), deleteFtsForFile on SnapshotTxn for incremental FTS updates.",
+      "description": "SQLite persistence: schema DDL, versioned migration runner, ModelStore, ReadHandle, SnapshotTxn, FTS5 helper, kind registry seed. Imports viewer-core for shared types. Includes embeddings table, file_hashes table, schema_migrations table, configurable PRAGMAs, busy_timeout PRAGMA, deleteFtsForFile on SnapshotTxn.",
       "public_exports": [
         {
           "name": "ModelStore",
@@ -465,7 +465,7 @@
       ]
     },
     "viewer-indexer": {
-      "description": "File discovery, tree-sitter extraction (TS, JSON, Python, Rust, Go, Java), TS language service adapter, import resolution, git history mining, subsystem inference, claim generation, partiality tracking. Phase 3: gains embedding computation via optional ONNX Runtime. Phase 4: gains worker-thread pool, incremental re-indexing, global symbol map, secret scrubbing, grammar checksums, verbose progress. Phase 5: gains Java visitor, picomatch for subsystem glob matching, comprehensive metadata scrubbing, path relativization, batch writer, incremental FTS, rename detection. Imports viewer-core, viewer-store.",
+      "description": "File discovery, tree-sitter extraction (TS, JSON, Python, Rust, Go, Java), TS language service adapter, import resolution, git history mining, subsystem inference, claim generation, partiality tracking. Includes optional ONNX Runtime embedding, worker-thread pool, incremental re-indexing, global symbol map, secret scrubbing, grammar checksums, Java visitor, picomatch glob matching, path relativization, batch writer, incremental FTS, rename detection. Imports viewer-core, viewer-store.",
       "public_exports": [
         {
           "name": "Indexer",
@@ -711,7 +711,7 @@
       ]
     },
     "viewer-retrieval": {
-      "description": "9 structured query operations, ResultEnvelope construction, retrieval pipeline. Imports viewer-core ONLY; never viewer-store. Defines structural ReadHandle interfaces satisfied by viewer-store at composition root. Phase 3: PipelineReadHandle gains optional semanticSearch; RetrievalQuery gains queryEmbedding. Phase 5: ResultEnvelope gains optional extractionQuality field; buildEnvelope computes extraction quality from partiality; suggestedNextCalls become result-dependent (dynamic suggestions).",
+      "description": "9 structured query operations, ResultEnvelope construction, retrieval pipeline. Imports viewer-core ONLY; never viewer-store. Defines structural ReadHandle interfaces satisfied by viewer-store at composition root. PipelineReadHandle includes optional semanticSearch; RetrievalQuery includes queryEmbedding; ResultEnvelope includes optional extractionQuality field; suggestedNextCalls are result-dependent.",
       "public_exports": [
         {
           "name": "getRepositoryOverview",
@@ -1178,7 +1178,7 @@
       ]
     },
     "viewer-surface": {
-      "description": "Composition root (createViewerEngine), MCP server (McpToolServer), CLI (runCli), feedback operations, reference resolver, revision comparison, doctor/init/status, capability classes, rule authoring. Imports all packages. Phase 3: gains rule authoring CLI commands. Phase 4: gains doctor --fix, --verbose/--full CLI flags, PRAGMA config wiring. Phase 5: gains --no-gitignore flag on init, gitignore modification logic, absolutePathsDetected/nativeBinding/busyTimeout in doctor report.",
+      "description": "Composition root (createViewerEngine), MCP server (McpToolServer), CLI (runCli), feedback operations, reference resolver, revision comparison, doctor/init/status, capability classes, rule authoring. Imports all packages. Includes rule authoring CLI, doctor --fix, --verbose/--full flags, PRAGMA config wiring, --no-gitignore on init, gitignore modification.",
       "public_exports": [
         {
           "name": "createViewerEngine",
@@ -1514,7 +1514,7 @@
       ]
     },
     "viewer-bench": {
-      "description": "Phase 2/3: Benchmark and eval infrastructure. Indexing throughput, symbol coverage evaluation, backend comparison, behavioral evals for viewer-scout, prompt-level evals (Phase 3). Dev-only, internal API, NOT a C2 writer.",
+      "description": "Benchmark and eval infrastructure. Indexing throughput, symbol coverage evaluation, backend comparison, behavioral evals for viewer-scout, prompt-level evals. Dev-only, internal API, NOT a C2 writer.",
       "public_exports": [
         {
           "name": "runBenchmark",

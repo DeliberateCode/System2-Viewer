@@ -14,7 +14,7 @@ function createMockHandle(edges: Array<{ fromNodeId: string; toNodeId: string; k
   };
 }
 
-describe('Phase 6: getImportGraph', () => {
+describe('getImportGraph', () => {
   it('returns empty graph for empty scope', () => {
     const handle = createMockHandle([]);
     const result = getImportGraph(handle, { scope: '*' });

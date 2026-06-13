@@ -1,9 +1,9 @@
 /**
- * Phase 2 stable contract preservation tests.
+ * Stable contract preservation tests.
  *
- * Verifies that Phase 2 changes do not break Phase 1 contracts:
- *   - MCP tool count remains at 21
- *   - CLI command count remains at 19
+ * Verifies that changes do not break existing contracts:
+ *   - MCP tool count remains at 22
+ *   - CLI command count remains at 22
  *   - Overlay manifest is unchanged
  *   - CapabilityClass has 4 members including 'verify'
  *   - ResultEnvelope shape is unchanged
@@ -23,7 +23,7 @@ import { COMMANDS } from '../cli-commands.js';
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: MCP tool surface unchanged', () => {
+describe('Stable contract: MCP tool surface unchanged', () => {
   it('MCP tool count is exactly 22', () => {
     expect(TOOL_TABLE).toHaveLength(22);
   });
@@ -62,7 +62,7 @@ describe('Phase 2 contract: MCP tool surface unchanged', () => {
     expect(names.size).toBe(EXPECTED_TOOLS.length);
   });
 
-  it('no new tools were added beyond the 22 Phase 6 tools', () => {
+  it('no new tools were added beyond the 22 expected tools', () => {
     const names = TOOL_TABLE.map((t) => t.name);
     expect(names.length).toBe(22);
   });
@@ -70,7 +70,7 @@ describe('Phase 2 contract: MCP tool surface unchanged', () => {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: CLI command surface unchanged', () => {
+describe('Stable contract: CLI command surface unchanged', () => {
   it('CLI command count is exactly 22', () => {
     expect(COMMANDS).toHaveLength(22);
   });
@@ -112,7 +112,7 @@ describe('Phase 2 contract: CLI command surface unchanged', () => {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: CapabilityClass type', () => {
+describe('Stable contract: CapabilityClass type', () => {
   it('has exactly 4 members', () => {
     expect(CAPABILITY_CLASSES).toHaveLength(4);
   });
@@ -134,7 +134,7 @@ describe('Phase 2 contract: CapabilityClass type', () => {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: overlay manifest unchanged', () => {
+describe('Stable contract: overlay manifest unchanged', () => {
   const overlayPath = join(
     __dirname,
     '../../../../plugin/system2.overlay.json',

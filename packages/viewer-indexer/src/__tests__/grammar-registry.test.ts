@@ -12,7 +12,7 @@ import {
 } from '../grammar-registry.js';
 
 describe('detectLanguage', () => {
-  // Phase 1 languages (unchanged behavior)
+  // Core languages
   it('maps .ts to typescript', () => {
     expect(detectLanguage('foo.ts')).toBe('typescript');
   });
@@ -49,7 +49,7 @@ describe('detectLanguage', () => {
     expect(detectLanguage('foo.json')).toBe('json');
   });
 
-  // Phase 2 languages
+  // Additional languages
   it('maps .py to python', () => {
     expect(detectLanguage('foo.py')).toBe('python');
   });
@@ -175,7 +175,7 @@ describe('GRAMMAR_REGISTRY', () => {
   });
 });
 
-describe('Phase 2 language visitors with empty source', () => {
+describe('Additional language visitors with empty source', () => {
   const emptyRoot = {
     type: 'source_file',
     text: '',

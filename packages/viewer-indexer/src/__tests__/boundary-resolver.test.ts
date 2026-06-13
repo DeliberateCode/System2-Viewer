@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveBoundaryMembership } from '../boundary-resolver.js';
 
-describe('Phase 6: resolveBoundaryMembership', () => {
+describe('resolveBoundaryMembership', () => {
   it('assigns files to matching boundaries', () => {
     const boundaries = [
       { name: 'auth', paths: ['src/auth/**'], publicInterface: ['src/auth/index.ts'] },
