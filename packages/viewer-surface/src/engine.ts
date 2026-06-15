@@ -549,7 +549,7 @@ function createOperationDispatcher(
             }
           }
 
-          let boundaryContexts: { declared: number; totalFiles: number; coveragePercent: number; violationCount: number } | undefined;
+          let boundaryContexts: { declared: number; totalFiles: number; coveragePercent: number; violationCount?: number } | undefined;
           if (config.moduleBoundaries && config.moduleBoundaries.length > 0 && state.readonlyDb) {
             const fileRows = state.readonlyDb.prepare(
               `SELECT path FROM nodes WHERE kind = 'file' AND valid_to_revision IS NULL AND path IS NOT NULL`,
@@ -562,11 +562,10 @@ function createOperationDispatcher(
               coveragePercent: filePaths.length > 0
                 ? Math.round((resolved.fileToBoundary.size / filePaths.length) * 100)
                 : 0,
-              violationCount: 0,
             };
           }
 
-          let eventTopology: { channels: number; edges: number; transports: string[]; unresolvedHints: number } | undefined;
+          let eventTopology: { channels: number; edges: number; transports: string[]; unresolvedHints?: number } | undefined;
           if (state.readonlyDb) {
             const efRows = state.readonlyDb.prepare(
               `SELECT metadata_json FROM edges WHERE kind = 'event-flow' AND valid_to_revision IS NULL`,
@@ -587,7 +586,6 @@ function createOperationDispatcher(
                 channels: channels.size,
                 edges: efRows.length,
                 transports: Array.from(transports).sort(),
-                unresolvedHints: 0,
               };
             }
           }

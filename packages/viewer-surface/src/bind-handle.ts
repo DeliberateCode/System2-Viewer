@@ -258,12 +258,14 @@ export function bindHandle(
 
     allImportEdges: (): Array<{ fromNodeId: string; toNodeId: string; fromPath: string; toPath: string }> => {
       const { sql: filter, params: filterParams } = intervalFilter(revision, 'e');
+      const { sql: nfFilter } = intervalFilter(revision, 'nf');
+      const { sql: ntFilter } = intervalFilter(revision, 'nt');
       const sql = `
         SELECT e.from_node_id, e.to_node_id,
                nf.path AS from_path, nt.path AS to_path
         FROM edges e
-        JOIN nodes nf ON nf.id = e.from_node_id AND nf.valid_to_revision IS NULL
-        JOIN nodes nt ON nt.id = e.to_node_id AND nt.valid_to_revision IS NULL
+        JOIN nodes nf ON nf.id = e.from_node_id AND ${nfFilter}
+        JOIN nodes nt ON nt.id = e.to_node_id AND ${ntFilter}
         WHERE e.kind = 'imports' AND ${filter}
       `;
       const rows = db.prepare(sql).all({ ...filterParams }) as Array<{

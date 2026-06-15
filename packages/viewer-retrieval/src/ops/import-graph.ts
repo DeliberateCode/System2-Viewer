@@ -178,19 +178,19 @@ function detectCycles(
   return { cycles, cyclesLimitReached: limitReached };
 }
 
-function transitiveClosure(startNodeId: string, adj: Map<string, AdjEntry>): Set<string> {
-  const visited = new Set<string>();
-  const queue = [startNodeId];
+function transitiveClosureMulti(seeds: Set<string>, adj: Map<string, AdjEntry>): Set<string> {
+  const visited = new Set<string>(seeds);
+  const queue = [...seeds];
   let head = 0;
   while (head < queue.length) {
     const current = queue[head++];
-    if (visited.has(current)) continue;
-    visited.add(current);
     for (const neighbor of adj.get(current)?.outgoing ?? []) {
-      if (!visited.has(neighbor)) queue.push(neighbor);
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
     }
   }
-  visited.delete(startNodeId);
   return visited;
 }
 
@@ -248,13 +248,7 @@ export function getImportGraph(
         seedNodes.add(e.toNodeId);
       }
     }
-    const reachable = new Set<string>();
-    for (const seed of seedNodes) {
-      for (const r of transitiveClosure(seed, fullAdj)) {
-        reachable.add(r);
-      }
-      reachable.add(seed);
-    }
+    const reachable = transitiveClosureMulti(seedNodes, fullAdj);
     const filteredEdges = allEdges.filter(
       (e) => reachable.has(e.fromNodeId) && reachable.has(e.toNodeId),
     );

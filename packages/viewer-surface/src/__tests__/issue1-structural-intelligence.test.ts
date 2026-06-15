@@ -684,10 +684,9 @@ describe('Issue #1: Engine exposes all four structural intelligence capabilities
     const engine = createViewerEngine({ dataDir });
     try {
       const report = await engine.doctor();
-      const data = report.data as Record<string, unknown>;
-      expect(data['frameworkHints']).toBeDefined();
-      const hints = data['frameworkHints'] as Record<string, unknown>;
-      expect(hints['configured']).toBe(1);
+      const data = report.data;
+      expect(data.frameworkHints).toBeDefined();
+      expect(data.frameworkHints?.configured).toBe(1);
     } finally {
       engine.close();
     }
@@ -711,10 +710,9 @@ describe('Issue #1: Engine exposes all four structural intelligence capabilities
     const engine = createViewerEngine({ dataDir });
     try {
       const report = await engine.doctor();
-      const data = report.data as Record<string, unknown>;
-      expect(data['topologyHintsStatus']).toBeDefined();
-      const status = data['topologyHintsStatus'] as Record<string, unknown>;
-      expect(status['configured']).toBe(1);
+      const data = report.data;
+      expect(data.topologyHintsStatus).toBeDefined();
+      expect(data.topologyHintsStatus?.configured).toBe(1);
     } finally {
       engine.close();
     }

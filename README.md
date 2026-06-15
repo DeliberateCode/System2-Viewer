@@ -9,6 +9,27 @@ System2-viewer builds a local, evidence-backed codebase model stored in SQLite. 
 
 Pre-built binaries are provided for common platforms via `prebuild-install`. If your platform isn't supported, a C++ compiler is needed to build the native `better-sqlite3` module from source.
 
+### Optional: semantic embeddings
+
+Semantic search requires the `all-MiniLM-L6-v2` ONNX model. `viewer doctor` reports `Embedding model: not_installed` when it is absent. To enable:
+
+```bash
+mkdir -p ~/.cache/system2-viewer/models
+# Download all-MiniLM-L6-v2 ONNX files (model.onnx + tokenizer.json) into that directory
+```
+
+Core indexing and all MCP/CLI operations work without this model.
+
+### Optional: eval suite
+
+`npm run bench:evals` and `npm run bench:prompt-evals` require an Anthropic API key:
+
+```bash
+export EVAL_LLM_API_KEY=sk-ant-...
+```
+
+Unit tests for the eval harness run offline without this key.
+
 ## Quickstart
 
 ```bash

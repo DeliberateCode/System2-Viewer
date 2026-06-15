@@ -91,14 +91,14 @@ export interface BoundaryContextsSummary {
   declared: number;
   totalFiles: number;
   coveragePercent: number;
-  violationCount: number;
+  violationCount?: number;
 }
 
 export interface EventTopologySummary {
   channels: number;
   edges: number;
   transports: string[];
-  unresolvedHints: number;
+  unresolvedHints?: number;
 }
 
 export interface RepositoryOverview {

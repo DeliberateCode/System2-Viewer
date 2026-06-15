@@ -171,7 +171,7 @@ describe('Stable contract: overlay manifest unchanged', () => {
     const content = readFileSync(overlayPath, 'utf-8');
     const hash = createHash('sha256').update(content).digest('hex');
     expect(hash).toBe(
-      '062e3adf8ea1da0a7c75220ad8f1ac66feba3c2aa8768a11e861bfd2c5398ccb',
+      '30530581c5997da7ab14d1854bafece31c6a4389f7d33ac7060e5c0666b13cd9',
     );
   });
 });

@@ -23,6 +23,9 @@ export const migration006: Migration = {
     // SQLite does not support ALTER TABLE to modify CHECK constraints.
     // Recreate the table with the expanded constraint.
     // No triggers or views reference `edges` (verified in schema.ts + all migrations).
+    // foreign_keys=OFF is required by SQLite's documented safe table-rebuild pattern so
+    // that the DROP does not cascade through any FK references that may exist in the future.
+    db.exec(`PRAGMA foreign_keys = OFF`);
     db.exec(`
       CREATE TABLE edges_new (
         id TEXT PRIMARY KEY,
@@ -43,9 +46,10 @@ export const migration006: Migration = {
       )
     `);
 
-    db.exec(`INSERT INTO edges_new SELECT * FROM edges`);
+    db.exec(`INSERT INTO edges_new (id, kind, epistemic, from_node_id, to_node_id, repository_id, confidence_band, provenance_method, extractor, evidence_ids_json, metadata_json, valid_from_revision, valid_to_revision, created_at, updated_at) SELECT id, kind, epistemic, from_node_id, to_node_id, repository_id, confidence_band, provenance_method, extractor, evidence_ids_json, metadata_json, valid_from_revision, valid_to_revision, created_at, updated_at FROM edges`);
     db.exec(`DROP TABLE edges`);
     db.exec(`ALTER TABLE edges_new RENAME TO edges`);
+    db.exec(`PRAGMA foreign_keys = ON`);
 
     // Recreate indexes
     db.exec(`CREATE INDEX IF NOT EXISTS idx_edges_from ON edges(from_node_id, kind, valid_to_revision)`);
@@ -58,4 +62,7 @@ export const migration006: Migration = {
         ('boundary-violation', 'claim_type', 0)
     `);
   },
+  // No `down`: dropping 'declared' from the CHECK constraint would silently discard
+  // any event-flow/boundary-violation edges written after this migration ran.
+  // Rollback must be handled by restoring from a database backup.
 };
