@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.1 — Structural Intelligence
+
+Adds import graph analysis, framework detection, module boundary enforcement, and topology hints. Closes #1.
+
+### Features
+
+- `viewer.getImportGraph` MCP tool and CLI command with fan-in/fan-out metrics and cycle detection (Tarjan's SCC)
+- Config-driven `frameworkHints` with built-in patterns for Flask, FastAPI, Django, and Spring
+- `moduleBoundaries` config with `module-boundaries.json` fallback and boundary violation detection in `checkInvariants`
+- `topologyHints` config for event-flow edges with `declared` epistemic status and `traceFlow` edge filtering
+- Java visitor improvements for annotation and interface extraction
+
+### Schema
+
+- Schema migration adding `declared` epistemic status to the edges table
+
+### Housekeeping
+
+- Bump version to 0.1.1 across all packages and plugin manifests
+- Add `VERSION` file at package root
+- Add `*.sqlite-wal`, `*.sqlite-shm`, `*.sqlite-journal` to `.gitignore`
+
 ## 0.1.0 — Initial Release
 
 Evidence-backed codebase model with structured querying, confidence scoring, and System2 overlay integration.

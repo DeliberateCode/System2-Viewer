@@ -80,7 +80,7 @@ function parseArgv(argv: string[]): ParsedArgv {
       // Boolean flags: --force, --deep, --include-symbol-facts, --public-api
       const booleanFlags = new Set([
         'force', 'deep', 'include-symbol-facts', 'public-api', 'skip-embed', 'full',
-        'fix', 'yes', 'no-gitignore',
+        'fix', 'yes', 'no-gitignore', 'detect-cycles', 'transitive-deps',
       ]);
       if (booleanFlags.has(key)) {
         flags[key] = 'true';
@@ -319,7 +319,8 @@ export async function runCli(
     out('');
     out('Commands: doctor, status, init, mcp-config, index, overview, entrypoints,');
     out('  trace, blast, subsystem, resolve, claims, uncertainties, verify,');
-    out('  history, check-invariants, confirm, reject, annotate, claim-create, rule');
+    out('  history, check-invariants, confirm, reject, annotate, claim-create,');
+    out('  import-graph, rule');
     return 2;
   }
 

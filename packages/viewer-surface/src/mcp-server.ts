@@ -314,6 +314,8 @@ export class McpToolServer {
           });
         }
         throw new Error('compareRevisions operation not available');
+      case 'getImportGraph':
+        return ops.getImportGraph(args);
       default:
         throw new Error(`Unknown read handler: ${handlerKey}`);
     }

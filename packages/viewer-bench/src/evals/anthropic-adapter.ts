@@ -24,17 +24,27 @@ const DEFAULT_TEMPERATURE = 0;
  */
 let _sdkCache: AnthropicSdkShape | null | undefined;
 
+async function defaultImportSdk(): Promise<AnthropicSdkShape | null> {
+  try {
+    return await import('@anthropic-ai/sdk' as string) as unknown as AnthropicSdkShape;
+  } catch {
+    return null;
+  }
+}
+
+/** @internal Exposed for testing — allows mocking SDK import and resetting cache. */
+export const _internals = {
+  importSdk: defaultImportSdk,
+  resetSdkCache(): void { _sdkCache = undefined; },
+};
+
 /**
  * Eagerly probes whether @anthropic-ai/sdk can be resolved.
  * Caches the result so the dynamic import only runs once.
  */
 async function probeSdk(): Promise<AnthropicSdkShape | null> {
   if (_sdkCache !== undefined) return _sdkCache;
-  try {
-    _sdkCache = await import('@anthropic-ai/sdk' as string) as unknown as AnthropicSdkShape;
-  } catch {
-    _sdkCache = null;
-  }
+  _sdkCache = await _internals.importSdk();
   return _sdkCache;
 }
 

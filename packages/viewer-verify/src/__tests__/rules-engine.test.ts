@@ -340,3 +340,119 @@ describe('RulesEngine with brace expansion patterns', () => {
     expect(result.violations).toHaveLength(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// checkInvariants envelope wrapper with BoundaryContext
+// ---------------------------------------------------------------------------
+
+describe('checkInvariants with BoundaryContext', () => {
+  it('detects cross-boundary violation for disallowed dependency', () => {
+    const engine = new RulesEngine([], []);
+    const handle = mkReadHandle([
+      {
+        fromNodeId: 'n1',
+        toNodeId: 'n2',
+        fromPath: 'src/api/handler.ts',
+        toPath: 'src/db/connection.ts',
+      },
+    ]);
+
+    const boundaryContext = {
+      fileToBoundary: new Map([
+        ['src/api/handler.ts', { boundaryName: 'api', isPublic: true }],
+        ['src/db/connection.ts', { boundaryName: 'db', isPublic: true }],
+      ]),
+      boundaries: new Map([
+        ['api', { publicFiles: new Set(['src/api/handler.ts']), allowedDependencies: ['utils'] }],
+        ['db', { publicFiles: new Set(['src/db/connection.ts']) }],
+      ]),
+    };
+
+    const result = checkInvariants(engine, handle, { boundaryContext });
+    const violations = result.data.violations;
+    expect(violations.length).toBeGreaterThan(0);
+    const boundaryViolation = violations.find(v => v.ruleId.startsWith('boundary:'));
+    expect(boundaryViolation).toBeDefined();
+  });
+
+  it('allows cross-boundary import when dependency is listed', () => {
+    const engine = new RulesEngine([], []);
+    const handle = mkReadHandle([
+      {
+        fromNodeId: 'n1',
+        toNodeId: 'n2',
+        fromPath: 'src/api/handler.ts',
+        toPath: 'src/db/connection.ts',
+      },
+    ]);
+
+    const boundaryContext = {
+      fileToBoundary: new Map([
+        ['src/api/handler.ts', { boundaryName: 'api', isPublic: true }],
+        ['src/db/connection.ts', { boundaryName: 'db', isPublic: true }],
+      ]),
+      boundaries: new Map([
+        ['api', { publicFiles: new Set(['src/api/handler.ts']), allowedDependencies: ['db'] }],
+        ['db', { publicFiles: new Set(['src/db/connection.ts']) }],
+      ]),
+    };
+
+    const result = checkInvariants(engine, handle, { boundaryContext });
+    const boundaryViolations = result.data.violations.filter(v => v.ruleId.startsWith('boundary:'));
+    expect(boundaryViolations).toHaveLength(0);
+  });
+
+  it('detects non-public file import violation', () => {
+    const engine = new RulesEngine([], []);
+    const handle = mkReadHandle([
+      {
+        fromNodeId: 'n1',
+        toNodeId: 'n2',
+        fromPath: 'src/api/handler.ts',
+        toPath: 'src/db/internal.ts',
+      },
+    ]);
+
+    const boundaryContext = {
+      fileToBoundary: new Map([
+        ['src/api/handler.ts', { boundaryName: 'api', isPublic: true }],
+        ['src/db/internal.ts', { boundaryName: 'db', isPublic: false }],
+      ]),
+      boundaries: new Map([
+        ['api', { publicFiles: new Set(['src/api/handler.ts']), allowedDependencies: ['db'] }],
+        ['db', { publicFiles: new Set(['src/db/connection.ts']) }],
+      ]),
+    };
+
+    const result = checkInvariants(engine, handle, { boundaryContext });
+    const violations = result.data.violations;
+    const nonPublicViolation = violations.find(v => v.ruleId.includes('non-public'));
+    expect(nonPublicViolation).toBeDefined();
+  });
+
+  it('ignores same-boundary imports', () => {
+    const engine = new RulesEngine([], []);
+    const handle = mkReadHandle([
+      {
+        fromNodeId: 'n1',
+        toNodeId: 'n2',
+        fromPath: 'src/db/connection.ts',
+        toPath: 'src/db/internal.ts',
+      },
+    ]);
+
+    const boundaryContext = {
+      fileToBoundary: new Map([
+        ['src/db/connection.ts', { boundaryName: 'db', isPublic: true }],
+        ['src/db/internal.ts', { boundaryName: 'db', isPublic: false }],
+      ]),
+      boundaries: new Map([
+        ['db', { publicFiles: new Set(['src/db/connection.ts']) }],
+      ]),
+    };
+
+    const result = checkInvariants(engine, handle, { boundaryContext });
+    const boundaryViolations = result.data.violations.filter(v => v.ruleId.startsWith('boundary:'));
+    expect(boundaryViolations).toHaveLength(0);
+  });
+});

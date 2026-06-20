@@ -350,7 +350,8 @@ describe('claimTypes', () => {
     expect(BUILT_IN_CLAIM_TYPES.has('directory-derived-subsystem-hypothesis')).toBe(true);
     expect(BUILT_IN_CLAIM_TYPES.has('subsystem-owns-file')).toBe(true);
     expect(BUILT_IN_CLAIM_TYPES.has('likely-entrypoint')).toBe(true);
-    expect(BUILT_IN_CLAIM_TYPES.size).toBe(6);
+    expect(BUILT_IN_CLAIM_TYPES.has('boundary-violation')).toBe(true);
+    expect(BUILT_IN_CLAIM_TYPES.size).toBe(7);
   });
 });
 

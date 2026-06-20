@@ -1,10 +1,13 @@
 // Config types and loading
-export type { ViewerConfig, SqliteConfig, RuleDef, ClaimTypeDef, RecipeDef, ConfigResult, ConfigIssue } from './config.js';
+export type { ViewerConfig, SqliteConfig, RuleDef, ClaimTypeDef, RecipeDef, FrameworkHintDef, BoundaryDef, TopologyDirection, TopologyHintDef, ConfigResult, ConfigIssue } from './config.js';
 export { loadConfig, loadConfigResult, BUILT_IN_CLAIM_TYPES } from './config.js';
 
 // Exclude pattern merging
 export type { ExcludeMatcher } from './excludes.js';
 export { buildExcludeSet, DEFAULT_SECRET_PATTERNS } from './excludes.js';
+
+// Framework hints
+export { DEFAULT_FRAMEWORK_HINTS, extractDecoratorNames } from './default-framework-hints.js';
 
 // Constants
 export {

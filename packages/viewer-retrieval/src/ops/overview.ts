@@ -18,10 +18,17 @@ import { buildEnvelope, type EnvelopeInput } from '../envelope.js';
 import { assertStructured } from '../envelope.js';
 import { runRetrievalPipeline } from '../pipeline.js';
 
+import type { BoundaryContextsSummary, EventTopologySummary } from '../types.js';
+
 export function getRepositoryOverview(
   handle: ReadView,
   repoNodeId: string,
-  opts?: { revision?: string; maxDepth?: number },
+  opts?: {
+    revision?: string;
+    maxDepth?: number;
+    boundaryContexts?: BoundaryContextsSummary;
+    eventTopology?: EventTopologySummary;
+  },
 ): ResultEnvelope<RepositoryOverview> {
   const revision = opts?.revision ?? 'latest';
   const maxDepth = opts?.maxDepth ?? 3;
@@ -137,6 +144,8 @@ export function getRepositoryOverview(
     backendCoverage: repoNode['metadata_json']
       ? safeParseJson(repoNode['metadata_json'] as string)
       : {},
+    ...(opts?.boundaryContexts ? { boundaryContexts: opts.boundaryContexts } : {}),
+    ...(opts?.eventTopology ? { eventTopology: opts.eventTopology } : {}),
   };
 
   // Build dynamic suggestions based on result

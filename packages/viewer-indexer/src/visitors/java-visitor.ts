@@ -38,6 +38,19 @@ function extractFieldNames(node: TreeSitterNode): string[] {
   return names;
 }
 
+function extractAnnotations(node: TreeSitterNode): string[] {
+  const annotations: string[] = [];
+  const modifiers = node.childForFieldName('modifiers');
+  if (!modifiers) return annotations;
+  for (const child of modifiers.children) {
+    if (child.type === 'marker_annotation' || child.type === 'annotation') {
+      const nameNode = child.childForFieldName('name');
+      if (nameNode) annotations.push(nameNode.text);
+    }
+  }
+  return annotations;
+}
+
 /**
  * Extracts members (methods, constructors, fields, nested classes/interfaces/enums)
  * from a class/interface/enum body node.
@@ -52,13 +65,17 @@ function extractMembers(
       case 'method_declaration': {
         const name = getItemName(child);
         if (name) {
+          const annotations = extractAnnotations(child);
           symbols.push({
             name,
             kind: 'method',
             exported: isPublicExported(child),
             startLine: child.startPosition.row + 1,
             endLine: child.endPosition.row + 1,
-            metadata: { parentClass: parentName },
+            metadata: {
+              parentClass: parentName,
+              ...(annotations.length > 0 ? { annotations } : {}),
+            },
           });
         }
         break;
@@ -82,6 +99,7 @@ function extractMembers(
       case 'field_declaration': {
         const fieldNames = extractFieldNames(child);
         const exported = isPublicExported(child);
+        const annotations = extractAnnotations(child);
         for (const fieldName of fieldNames) {
           symbols.push({
             name: fieldName,
@@ -89,7 +107,10 @@ function extractMembers(
             exported,
             startLine: child.startPosition.row + 1,
             endLine: child.endPosition.row + 1,
-            metadata: { parentClass: parentName },
+            metadata: {
+              parentClass: parentName,
+              ...(annotations.length > 0 ? { annotations } : {}),
+            },
           });
         }
         break;
@@ -226,12 +247,14 @@ export const visitJava: LanguageVisitor = (rootNode, _content) => {
       case 'class_declaration': {
         const name = getItemName(child);
         if (name) {
+          const annotations = extractAnnotations(child);
           symbols.push({
             name,
             kind: 'class',
             exported: isPublicExported(child),
             startLine: child.startPosition.row + 1,
             endLine: child.endPosition.row + 1,
+            ...(annotations.length > 0 ? { metadata: { annotations } } : {}),
           });
           const body = child.childForFieldName('body');
           if (body) {

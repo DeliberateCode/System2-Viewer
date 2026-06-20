@@ -1,9 +1,9 @@
 /**
- * Phase 2 stable contract preservation tests.
+ * Stable contract preservation tests.
  *
- * Verifies that Phase 2 changes do not break Phase 1 contracts:
- *   - MCP tool count remains at 21
- *   - CLI command count remains at 19
+ * Verifies that changes do not break existing contracts:
+ *   - MCP tool count remains at 22
+ *   - CLI command count remains at 22
  *   - Overlay manifest is unchanged
  *   - CapabilityClass has 4 members including 'verify'
  *   - ResultEnvelope shape is unchanged
@@ -23,12 +23,12 @@ import { COMMANDS } from '../cli-commands.js';
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: MCP tool surface unchanged', () => {
-  it('MCP tool count is exactly 21', () => {
-    expect(TOOL_TABLE).toHaveLength(21);
+describe('Stable contract: MCP tool surface unchanged', () => {
+  it('MCP tool count is exactly 22', () => {
+    expect(TOOL_TABLE).toHaveLength(22);
   });
 
-  it('all 21 expected tool names are present', () => {
+  it('all 22 expected tool names are present', () => {
     const names = new Set(TOOL_TABLE.map((t) => t.name));
 
     const EXPECTED_TOOLS = [
@@ -53,6 +53,7 @@ describe('Phase 2 contract: MCP tool surface unchanged', () => {
       'viewer.confirmSubsystem',
       'viewer.rejectSubsystem',
       'viewer.annotateSubsystem',
+      'viewer.getImportGraph',
     ];
 
     for (const tool of EXPECTED_TOOLS) {
@@ -61,21 +62,20 @@ describe('Phase 2 contract: MCP tool surface unchanged', () => {
     expect(names.size).toBe(EXPECTED_TOOLS.length);
   });
 
-  it('no new tools were added beyond the 21 Phase 1 tools', () => {
-    // If this fails, a new tool was added which violates the contract
+  it('no new tools were added beyond the 22 expected tools', () => {
     const names = TOOL_TABLE.map((t) => t.name);
-    expect(names.length).toBe(21);
+    expect(names.length).toBe(22);
   });
 });
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: CLI command surface unchanged', () => {
-  it('CLI command count is exactly 21', () => {
-    expect(COMMANDS).toHaveLength(21);
+describe('Stable contract: CLI command surface unchanged', () => {
+  it('CLI command count is exactly 22', () => {
+    expect(COMMANDS).toHaveLength(22);
   });
 
-  it('all 21 expected command names are present', () => {
+  it('all 22 expected command names are present', () => {
     const names = new Set(COMMANDS.map((c) => c.name));
 
     const EXPECTED_COMMANDS = [
@@ -99,6 +99,7 @@ describe('Phase 2 contract: CLI command surface unchanged', () => {
       'reject',
       'annotate',
       'claim-create',
+      'import-graph',
       'rule',
     ];
 
@@ -111,7 +112,7 @@ describe('Phase 2 contract: CLI command surface unchanged', () => {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: CapabilityClass type', () => {
+describe('Stable contract: CapabilityClass type', () => {
   it('has exactly 4 members', () => {
     expect(CAPABILITY_CLASSES).toHaveLength(4);
   });
@@ -133,7 +134,7 @@ describe('Phase 2 contract: CapabilityClass type', () => {
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
-describe('Phase 2 contract: overlay manifest unchanged', () => {
+describe('Stable contract: overlay manifest unchanged', () => {
   const overlayPath = join(
     __dirname,
     '../../../../plugin/system2.overlay.json',
@@ -170,7 +171,7 @@ describe('Phase 2 contract: overlay manifest unchanged', () => {
     const content = readFileSync(overlayPath, 'utf-8');
     const hash = createHash('sha256').update(content).digest('hex');
     expect(hash).toBe(
-      '062e3adf8ea1da0a7c75220ad8f1ac66feba3c2aa8768a11e861bfd2c5398ccb',
+      '30530581c5997da7ab14d1854bafece31c6a4389f7d33ac7060e5c0666b13cd9',
     );
   });
 });

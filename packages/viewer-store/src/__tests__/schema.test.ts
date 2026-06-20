@@ -60,8 +60,8 @@ describe('schema initialization', () => {
     const db = new Database(join(dataDir, 'model.sqlite'), { readonly: true });
     try {
       const count = db.prepare('SELECT COUNT(*) AS cnt FROM kind_registry').get() as { cnt: number };
-      // The seed SQL has 28 entries
-      expect(count.cnt).toBe(28);
+      // The seed SQL has 30 entries
+      expect(count.cnt).toBe(30);
 
       // Check key node kinds
       for (const kind of ['repository', 'file', 'symbol', 'package', 'subsystem', 'directory']) {
@@ -152,7 +152,7 @@ describe('schema initialization', () => {
     const db = new Database(join(dataDir, 'model.sqlite'), { readonly: true });
     try {
       const version = db.pragma('user_version', { simple: true }) as number;
-      expect(version).toBe(5);
+      expect(version).toBe(6);
     } finally {
       db.close();
     }
@@ -313,7 +313,7 @@ describe('schema initialization', () => {
       expect(tables).toHaveLength(1);
 
       const version = db2.pragma('user_version', { simple: true }) as number;
-      expect(version).toBe(5);
+      expect(version).toBe(6);
     } finally {
       db2.close();
     }

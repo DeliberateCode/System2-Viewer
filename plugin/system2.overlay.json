@@ -1,6 +1,6 @@
 {
   "name": "system2-viewer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Evidence-backed codebase model with structured querying and confidence scoring",
   "schema_version": "1.0.0",
   "tags": ["evidence-source", "codebase-model", "architecture-analysis"],

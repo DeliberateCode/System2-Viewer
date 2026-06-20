@@ -323,3 +323,81 @@ describe('matchForbiddenImport with picomatch brace expansion', () => {
     ).toBe(false);
   });
 });
+
+describe('matchForbiddenImport with boundary: patterns', () => {
+  const boundaryContext = {
+    fileToBoundary: new Map([
+      ['src/api/handler.ts', { boundaryName: 'api', isPublic: true }],
+      ['src/api/internal.ts', { boundaryName: 'api', isPublic: false }],
+      ['src/db/connection.ts', { boundaryName: 'db', isPublic: true }],
+      ['src/db/schema.ts', { boundaryName: 'db', isPublic: false }],
+      ['src/utils/helper.ts', { boundaryName: 'utils', isPublic: true }],
+    ]),
+  };
+
+  it('matches boundary:NAME in from pattern', () => {
+    const [rule] = loadExplicitRules('repo-1', [
+      mkRuleDef({
+        from: { pathGlob: 'boundary:api' },
+        to: { pathGlob: 'boundary:db' },
+      }),
+    ]);
+    expect(
+      matchForbiddenImport(rule!, 'src/api/handler.ts', 'src/db/connection.ts', boundaryContext),
+    ).toBe(true);
+  });
+
+  it('rejects when file is not in boundary', () => {
+    const [rule] = loadExplicitRules('repo-1', [
+      mkRuleDef({
+        from: { pathGlob: 'boundary:api' },
+        to: { pathGlob: 'boundary:db' },
+      }),
+    ]);
+    expect(
+      matchForbiddenImport(rule!, 'src/utils/helper.ts', 'src/db/connection.ts', boundaryContext),
+    ).toBe(false);
+  });
+
+  it('matches boundary:NAME:internal scope', () => {
+    const [rule] = loadExplicitRules('repo-1', [
+      mkRuleDef({
+        from: { pathGlob: '**' },
+        to: { pathGlob: 'boundary:db:internal' },
+      }),
+    ]);
+    expect(
+      matchForbiddenImport(rule!, 'src/api/handler.ts', 'src/db/schema.ts', boundaryContext),
+    ).toBe(true);
+    expect(
+      matchForbiddenImport(rule!, 'src/api/handler.ts', 'src/db/connection.ts', boundaryContext),
+    ).toBe(false);
+  });
+
+  it('returns false when no boundaryContext provided', () => {
+    const [rule] = loadExplicitRules('repo-1', [
+      mkRuleDef({
+        from: { pathGlob: 'boundary:api' },
+        to: { pathGlob: 'boundary:db' },
+      }),
+    ]);
+    expect(
+      matchForbiddenImport(rule!, 'src/api/handler.ts', 'src/db/connection.ts'),
+    ).toBe(false);
+  });
+
+  it('can mix boundary and glob patterns', () => {
+    const [rule] = loadExplicitRules('repo-1', [
+      mkRuleDef({
+        from: { pathGlob: 'boundary:api' },
+        to: { pathGlob: 'src/db/**' },
+      }),
+    ]);
+    expect(
+      matchForbiddenImport(rule!, 'src/api/handler.ts', 'src/db/schema.ts', boundaryContext),
+    ).toBe(true);
+    expect(
+      matchForbiddenImport(rule!, 'src/utils/helper.ts', 'src/db/schema.ts', boundaryContext),
+    ).toBe(false);
+  });
+});

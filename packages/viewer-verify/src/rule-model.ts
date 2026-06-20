@@ -112,13 +112,46 @@ export function matchForbiddenImport(
   rule: EnforceableRule,
   fromPath: string,
   toPath: string,
+  boundaryContext?: {
+    fileToBoundary: Map<string, { boundaryName: string; isPublic: boolean }>;
+  },
 ): boolean {
   if (rule.definition.type !== 'forbidden_import') return false;
 
   const fromGlob = rule.definition.from.pathGlob;
   const toGlob = rule.definition.to.pathGlob;
 
-  return globMatch(fromGlob, fromPath) && globMatch(toGlob, toPath);
+  const fromMatch = matchBoundaryOrGlob(fromGlob, fromPath, boundaryContext);
+  const toMatch = matchBoundaryOrGlob(toGlob, toPath, boundaryContext);
+
+  return fromMatch && toMatch;
+}
+
+function matchBoundaryOrGlob(
+  pattern: string,
+  filePath: string,
+  boundaryContext?: { fileToBoundary: Map<string, { boundaryName: string; isPublic: boolean }> },
+): boolean {
+  if (pattern.startsWith('boundary:')) {
+    if (!boundaryContext) return false;
+    const rest = pattern.slice('boundary:'.length);
+    const lastColon = rest.lastIndexOf(':');
+    const knownScopes = ['internal'];
+    let boundaryName: string;
+    let scope: string | undefined;
+    if (lastColon > 0 && knownScopes.includes(rest.slice(lastColon + 1))) {
+      boundaryName = rest.slice(0, lastColon);
+      scope = rest.slice(lastColon + 1);
+    } else {
+      boundaryName = rest;
+      scope = undefined;
+    }
+    const membership = boundaryContext.fileToBoundary.get(filePath);
+    if (!membership || membership.boundaryName !== boundaryName) return false;
+    if (scope === 'internal') return !membership.isPublic;
+    return true;
+  }
+  return globMatch(pattern, filePath);
 }
 
 /**

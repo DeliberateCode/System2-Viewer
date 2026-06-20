@@ -16,9 +16,9 @@ import { SOURCE_WRITE_IS_UNREPRESENTABLE } from '@system2-viewer/viewer-core';
 // ---------------------------------------------------------------------------
 
 describe('allToolDescriptors', () => {
-  it('returns exactly 21 tool descriptors', () => {
+  it('returns exactly 22 tool descriptors', () => {
     const descriptors = allToolDescriptors();
-    expect(descriptors).toHaveLength(21);
+    expect(descriptors).toHaveLength(22);
   });
 
   it('all descriptors have required fields', () => {
@@ -67,14 +67,14 @@ describe('allToolDescriptors', () => {
     expect(names).toContain('viewer.index');
   });
 
-  it('has 13 read, 1 verify, 6 feedback, and 1 index tool', () => {
+  it('has 14 read, 1 verify, 6 feedback, and 1 index tool', () => {
     const descriptors = allToolDescriptors();
     const read = descriptors.filter(d => d.capability === 'read');
     const verify = descriptors.filter(d => d.capability === 'verify');
     const feedback = descriptors.filter(d => d.capability === 'feedback');
     const index = descriptors.filter(d => d.capability === 'index');
 
-    expect(read).toHaveLength(13);
+    expect(read).toHaveLength(14);
     expect(verify).toHaveLength(1);
     expect(feedback).toHaveLength(6);
     expect(index).toHaveLength(1);

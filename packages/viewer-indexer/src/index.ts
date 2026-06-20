@@ -15,6 +15,10 @@ export { scrubSecrets, shannonEntropy, getPatternCount } from './secret-scrub.js
 export { hashFileContent, computeIncrementalDiff, computeStatDiff } from './incremental.js';
 export type { StatFingerprint } from './incremental.js';
 
+// Boundary resolution
+export { resolveBoundaryMembership } from './boundary-resolver.js';
+export type { BoundaryDef, BoundaryMembership, ResolvedBoundaryInfo, ResolvedBoundaries } from './boundary-resolver.js';
+
 // Rename detection
 export { detectRenames, pathSimilarity } from './rename-detect.js';
 export type { RenameCandidate } from './rename-detect.js';

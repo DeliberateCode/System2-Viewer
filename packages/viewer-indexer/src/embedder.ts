@@ -136,6 +136,9 @@ async function tryImportOnnx(): Promise<unknown | null> {
   }
 }
 
+/** @internal Exposed for testing — allows mocking the ONNX import. */
+export const _internals = { importOnnx: tryImportOnnx };
+
 /**
  * Attempts to load the ONNX Runtime and embedding model.
  * Returns null if onnxruntime-node is not installed or model file is missing.
@@ -148,7 +151,7 @@ export async function tryLoadEmbedder(
   modelPath?: string,
   modelName: string = DEFAULT_MODEL_NAME,
 ): Promise<Embedder | null> {
-  const ort = await tryImportOnnx();
+  const ort = await _internals.importOnnx();
   if (ort === null) {
     return null;
   }
@@ -174,15 +177,35 @@ export async function tryLoadEmbedder(
 
     async function runInference(text: string): Promise<Float32Array> {
       const { inputIds, attentionMask } = tokenize(text);
-      const tokenTypeIds = new BigInt64Array(128);
+      const seqLen = 128;
+      const tokenTypeIds = new BigInt64Array(seqLen);
       const feeds = {
-        input_ids: new Tensor('int64', inputIds, [1, 128]),
-        attention_mask: new Tensor('int64', attentionMask, [1, 128]),
-        token_type_ids: new Tensor('int64', tokenTypeIds, [1, 128]),
+        input_ids: new Tensor('int64', inputIds, [1, seqLen]),
+        attention_mask: new Tensor('int64', attentionMask, [1, seqLen]),
+        token_type_ids: new Tensor('int64', tokenTypeIds, [1, seqLen]),
       };
       const output = await session.run(feeds);
       const key = Object.keys(output)[0];
-      return new Float32Array(output[key].data);
+      const hidden = output[key].data as Float32Array;
+
+      // Mean-pool across non-padding token positions
+      const result = new Float32Array(dimension);
+      let maskSum = 0;
+      for (let t = 0; t < seqLen; t++) {
+        const m = Number(attentionMask[t]);
+        if (m === 0) continue;
+        maskSum += m;
+        const offset = t * dimension;
+        for (let d = 0; d < dimension; d++) {
+          result[d] += hidden[offset + d];
+        }
+      }
+      if (maskSum > 0) {
+        for (let d = 0; d < dimension; d++) {
+          result[d] /= maskSum;
+        }
+      }
+      return result;
     }
 
     const cache = new Map<string, Float32Array>();
@@ -230,7 +253,7 @@ export async function tryLoadEmbedder(
 export async function probeEmbedderStatus(
   modelName: string = DEFAULT_MODEL_NAME,
 ): Promise<EmbedderStatus> {
-  const ort = await tryImportOnnx();
+  const ort = await _internals.importOnnx();
   if (ort === null) {
     return { status: 'not_installed' };
   }

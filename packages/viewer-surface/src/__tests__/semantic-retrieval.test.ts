@@ -10,6 +10,15 @@ import { describe, it, expect, vi } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
+vi.mock('@system2-viewer/viewer-indexer', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@system2-viewer/viewer-indexer')>();
+  return {
+    ...original,
+    probeEmbedderStatus: vi.fn(async () => ({ status: 'not_installed' as const })),
+    tryLoadEmbedder: vi.fn(async () => null),
+  };
+});
+
 import { runRetrievalPipeline, PIPELINE_STAGES } from '@system2-viewer/viewer-retrieval';
 import { TOOL_TABLE } from '../tool-table.js';
 import { COMMANDS, COMMAND_MAP } from '../cli-commands.js';
@@ -63,7 +72,7 @@ function createMockDb(): any {
 
 describe('Semantic retrieval: ONNX not installed graceful degradation', () => {
   it('semantic stage returns [] when handle has no semanticSearch method', () => {
-    // A handle without semanticSearch (legacy/Phase 1 shape)
+    // A handle without semanticSearch (legacy shape)
     const handle = {
       neighbors: vi.fn(() => []),
       ftsSearch: vi.fn(() => []),

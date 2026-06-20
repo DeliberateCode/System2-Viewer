@@ -37,6 +37,24 @@ npm test             # vitest run
 npm run typecheck    # tsc -b --noEmit
 ```
 
+## Optional runtime dependencies
+
+### Semantic embeddings
+
+Semantic search requires the `all-MiniLM-L6-v2` ONNX model. When absent, `viewer doctor` reports `Embedding model: not_installed` and semantic search is unavailable. All other operations work without it.
+
+To enable, download `model.onnx` and `tokenizer.json` for `all-MiniLM-L6-v2` into `~/.cache/system2-viewer/models/`.
+
+### Eval suite
+
+`npm run bench:evals` and `npm run bench:prompt-evals` require:
+
+```sh
+export EVAL_LLM_API_KEY=sk-ant-...
+```
+
+Unit tests for the eval harness mock the API key and run offline.
+
 ## Native Dependencies
 
 `better-sqlite3` includes a prebuilt native binary for most platforms. When the prebuilt binary is unavailable, npm falls back to compiling from source, which requires a C++ toolchain.

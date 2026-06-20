@@ -17,8 +17,8 @@ import type { ViewerOperations, FeedbackOperations, IndexerLike } from '../types
 // ---------------------------------------------------------------------------
 
 describe('TOOL_TABLE', () => {
-  it('has exactly 21 entries', () => {
-    expect(TOOL_TABLE).toHaveLength(21);
+  it('has exactly 22 entries', () => {
+    expect(TOOL_TABLE).toHaveLength(22);
   });
 
   it('has no duplicate tool names', () => {
@@ -72,6 +72,7 @@ describe('tool name enumeration', () => {
     'viewer.confirmSubsystem',
     'viewer.rejectSubsystem',
     'viewer.annotateSubsystem',
+    'viewer.getImportGraph',
     'viewer.index',
   ];
 
@@ -109,6 +110,7 @@ describe('capabilityClassOf via MCP context', () => {
       'viewer.resolveReference',
       'viewer.getClaimHistory',
       'viewer.compareRevisions',
+      'viewer.getImportGraph',
     ];
     for (const name of readTools) {
       expect(capabilityClassOf(name)).toBe('read');

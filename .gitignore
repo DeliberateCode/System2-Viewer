@@ -3,6 +3,9 @@ dist
 spec
 .system2-viewer
 *.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
 *.tsbuildinfo
 *.bak
 rules-export.json

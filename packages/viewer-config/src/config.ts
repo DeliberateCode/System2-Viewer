@@ -45,6 +45,9 @@ export interface ViewerConfig {
   subsystems?: Array<{ id: string; name: string; paths: string[] }>;
   rules?: RuleDef[];
   claimTypes?: ClaimTypeDef[];
+  frameworkHints?: FrameworkHintDef[];
+  moduleBoundaries?: BoundaryDef[];
+  topologyHints?: TopologyHintDef[];
   remote: {
     enabled: boolean;
   };
@@ -70,6 +73,30 @@ export interface RuleDef {
   to: { pathGlob: string };
   severity: string;
   enabled?: boolean;
+}
+
+export interface FrameworkHintDef {
+  pattern: string;
+  framework: string;
+  entrypointKind: string;
+  excludePaths?: string[];
+}
+
+export interface BoundaryDef {
+  name: string;
+  paths: string[];
+  publicInterface: string[];
+  allowedDependencies?: string[];
+}
+
+export type TopologyDirection = 'publish' | 'subscribe' | 'request' | 'respond';
+
+export interface TopologyHintDef {
+  source: string;
+  sink: string;
+  channel: string;
+  transport: string;
+  direction: TopologyDirection;
 }
 
 export interface ConfigIssue {
@@ -114,6 +141,9 @@ function defaultConfig(): ViewerConfig {
 
 const VALID_SYMBOL_BACKENDS = new Set<string>(['treesitter', 'lsp', 'scip']);
 
+// Reserved names — prevent user-defined collisions.
+// Most are reservation-only. 'boundary-violation' is also seeded in
+// kind_registry because the system generates claims of this type.
 export const BUILT_IN_CLAIM_TYPES = new Set<string>([
   'file-defines-symbol',
   'file-defines-symbols',
@@ -121,6 +151,7 @@ export const BUILT_IN_CLAIM_TYPES = new Set<string>([
   'directory-derived-subsystem-hypothesis',
   'subsystem-owns-file',
   'likely-entrypoint',
+  'boundary-violation',
 ]);
 
 function validateSchema(raw: unknown): ConfigIssue[] {
@@ -274,6 +305,105 @@ function validateSchema(raw: unknown): ConfigIssue[] {
     }
   }
 
+  // frameworkHints
+  if ('frameworkHints' in obj && obj.frameworkHints !== undefined) {
+    if (!Array.isArray(obj.frameworkHints)) {
+      issues.push({ path: 'frameworkHints', message: '"frameworkHints" must be an array', severity: 'error' });
+    } else {
+      for (let i = 0; i < obj.frameworkHints.length; i++) {
+        const h = obj.frameworkHints[i] as unknown;
+        if (typeof h !== 'object' || h === null || Array.isArray(h)) {
+          issues.push({ path: `frameworkHints[${i}]`, message: 'FrameworkHint entry must be an object', severity: 'warning' });
+          continue;
+        }
+        const hint = h as Record<string, unknown>;
+        if (typeof hint.pattern !== 'string' || hint.pattern.length === 0) {
+          issues.push({ path: `frameworkHints[${i}].pattern`, message: '"pattern" must be a non-empty string', severity: 'error' });
+        }
+        if (typeof hint.framework !== 'string' || hint.framework.length === 0) {
+          issues.push({ path: `frameworkHints[${i}].framework`, message: '"framework" must be a non-empty string', severity: 'error' });
+        }
+        if (typeof hint.entrypointKind !== 'string' || hint.entrypointKind.length === 0) {
+          issues.push({ path: `frameworkHints[${i}].entrypointKind`, message: '"entrypointKind" must be a non-empty string', severity: 'error' });
+        }
+        if ('excludePaths' in hint && hint.excludePaths !== undefined) {
+          if (!Array.isArray(hint.excludePaths) || !hint.excludePaths.every((p: unknown) => typeof p === 'string')) {
+            issues.push({ path: `frameworkHints[${i}].excludePaths`, message: '"excludePaths" must be an array of strings', severity: 'warning' });
+          }
+        }
+      }
+    }
+  }
+
+  // moduleBoundaries
+  if ('moduleBoundaries' in obj && obj.moduleBoundaries !== undefined) {
+    if (!Array.isArray(obj.moduleBoundaries)) {
+      issues.push({ path: 'moduleBoundaries', message: '"moduleBoundaries" must be an array', severity: 'error' });
+    } else {
+      const seenNames = new Set<string>();
+      for (let i = 0; i < obj.moduleBoundaries.length; i++) {
+        const b = obj.moduleBoundaries[i] as unknown;
+        if (typeof b !== 'object' || b === null || Array.isArray(b)) {
+          issues.push({ path: `moduleBoundaries[${i}]`, message: 'Boundary entry must be an object', severity: 'error' });
+          continue;
+        }
+        const bnd = b as Record<string, unknown>;
+        if (typeof bnd.name !== 'string' || bnd.name.length === 0) {
+          issues.push({ path: `moduleBoundaries[${i}].name`, message: '"name" must be a non-empty string', severity: 'error' });
+        } else if ((bnd.name as string).includes(':')) {
+          issues.push({ path: `moduleBoundaries[${i}].name`, message: '"name" must not contain colons (reserved for rule pattern syntax)', severity: 'error' });
+        } else if (seenNames.has(bnd.name)) {
+          issues.push({ path: `moduleBoundaries[${i}].name`, message: `Duplicate boundary name "${bnd.name}"`, severity: 'error' });
+        } else {
+          seenNames.add(bnd.name);
+        }
+        if (!Array.isArray(bnd.paths) || bnd.paths.length === 0 || !bnd.paths.every((p: unknown) => typeof p === 'string')) {
+          issues.push({ path: `moduleBoundaries[${i}].paths`, message: '"paths" must be a non-empty array of strings', severity: 'error' });
+        }
+        if (!Array.isArray(bnd.publicInterface) || bnd.publicInterface.length === 0 || !bnd.publicInterface.every((p: unknown) => typeof p === 'string')) {
+          issues.push({ path: `moduleBoundaries[${i}].publicInterface`, message: '"publicInterface" must be a non-empty array of strings', severity: 'error' });
+        }
+        if ('allowedDependencies' in bnd && bnd.allowedDependencies !== undefined) {
+          if (!Array.isArray(bnd.allowedDependencies) || !bnd.allowedDependencies.every((d: unknown) => typeof d === 'string')) {
+            issues.push({ path: `moduleBoundaries[${i}].allowedDependencies`, message: '"allowedDependencies" must be an array of strings', severity: 'warning' });
+          }
+        }
+      }
+    }
+  }
+
+  // topologyHints
+  if ('topologyHints' in obj && obj.topologyHints !== undefined) {
+    const VALID_DIRECTIONS = new Set(['publish', 'subscribe', 'request', 'respond']);
+    if (!Array.isArray(obj.topologyHints)) {
+      issues.push({ path: 'topologyHints', message: '"topologyHints" must be an array', severity: 'error' });
+    } else {
+      for (let i = 0; i < obj.topologyHints.length; i++) {
+        const t = obj.topologyHints[i] as unknown;
+        if (typeof t !== 'object' || t === null || Array.isArray(t)) {
+          issues.push({ path: `topologyHints[${i}]`, message: 'TopologyHint entry must be an object', severity: 'error' });
+          continue;
+        }
+        const hint = t as Record<string, unknown>;
+        if (typeof hint.source !== 'string' || hint.source.length === 0) {
+          issues.push({ path: `topologyHints[${i}].source`, message: '"source" must be a non-empty string', severity: 'error' });
+        }
+        if (typeof hint.sink !== 'string' || hint.sink.length === 0) {
+          issues.push({ path: `topologyHints[${i}].sink`, message: '"sink" must be a non-empty string', severity: 'error' });
+        }
+        if (typeof hint.channel !== 'string' || hint.channel.length === 0) {
+          issues.push({ path: `topologyHints[${i}].channel`, message: '"channel" must be a non-empty string', severity: 'error' });
+        }
+        if (typeof hint.transport !== 'string' || hint.transport.length === 0) {
+          issues.push({ path: `topologyHints[${i}].transport`, message: '"transport" must be a non-empty string', severity: 'error' });
+        }
+        if (typeof hint.direction !== 'string' || !VALID_DIRECTIONS.has(hint.direction)) {
+          issues.push({ path: `topologyHints[${i}].direction`, message: '"direction" must be one of: publish, subscribe, request, respond', severity: 'error' });
+        }
+      }
+    }
+  }
+
   // remote
   if ('remote' in obj && obj.remote !== undefined) {
     if (typeof obj.remote !== 'object' || obj.remote === null || Array.isArray(obj.remote)) {
@@ -287,6 +417,15 @@ function validateSchema(raw: unknown): ConfigIssue[] {
   }
 
   return issues;
+}
+
+// ---------------------------------------------------------------------------
+// Config string sanitization (internal)
+// ---------------------------------------------------------------------------
+
+function sanitizeConfigString(value: string, maxLen = 256): string {
+  // eslint-disable-next-line no-control-regex
+  return value.replace(/[\x00-\x1f\x7f]/g, '').slice(0, maxLen);
 }
 
 // ---------------------------------------------------------------------------
@@ -453,6 +592,93 @@ function mergeDefaults(raw: Record<string, unknown>): ViewerConfig {
     if (valid.length > 0) defaults.claimTypes = valid;
   }
 
+  // frameworkHints
+  if (Array.isArray(raw.frameworkHints)) {
+    const valid: FrameworkHintDef[] = [];
+    for (const h of raw.frameworkHints) {
+      if (
+        typeof h === 'object' && h !== null && !Array.isArray(h) &&
+        typeof (h as Record<string, unknown>).pattern === 'string' && (h as Record<string, unknown>).pattern !== '' &&
+        typeof (h as Record<string, unknown>).framework === 'string' && (h as Record<string, unknown>).framework !== '' &&
+        typeof (h as Record<string, unknown>).entrypointKind === 'string' && (h as Record<string, unknown>).entrypointKind !== ''
+      ) {
+        const hint = h as Record<string, unknown>;
+        const entry: FrameworkHintDef = {
+          pattern: sanitizeConfigString(hint.pattern as string),
+          framework: sanitizeConfigString(hint.framework as string),
+          entrypointKind: sanitizeConfigString(hint.entrypointKind as string),
+        };
+        if (entry.pattern === '' || entry.framework === '' || entry.entrypointKind === '') continue;
+        if (Array.isArray(hint.excludePaths) && hint.excludePaths.every((p: unknown) => typeof p === 'string')) {
+          entry.excludePaths = (hint.excludePaths as string[]).map((p) => sanitizeConfigString(p, 512));
+        }
+        valid.push(entry);
+      }
+    }
+    if (valid.length > 0) defaults.frameworkHints = valid;
+  }
+
+  // moduleBoundaries
+  if (Array.isArray(raw.moduleBoundaries)) {
+    const valid: BoundaryDef[] = [];
+    const seenNames = new Set<string>();
+    for (const b of raw.moduleBoundaries) {
+      if (
+        typeof b === 'object' && b !== null && !Array.isArray(b) &&
+        typeof (b as Record<string, unknown>).name === 'string' && (b as Record<string, unknown>).name !== '' &&
+        Array.isArray((b as Record<string, unknown>).paths) && ((b as Record<string, unknown>).paths as unknown[]).length > 0 &&
+        ((b as Record<string, unknown>).paths as unknown[]).every((p: unknown) => typeof p === 'string') &&
+        Array.isArray((b as Record<string, unknown>).publicInterface) && ((b as Record<string, unknown>).publicInterface as unknown[]).length > 0 &&
+        ((b as Record<string, unknown>).publicInterface as unknown[]).every((p: unknown) => typeof p === 'string')
+      ) {
+        const bnd = b as Record<string, unknown>;
+        const name = sanitizeConfigString(bnd.name as string);
+        if (name === '') continue;
+        if (seenNames.has(name)) continue;
+        seenNames.add(name);
+        const entry: BoundaryDef = {
+          name,
+          paths: (bnd.paths as string[]).map((p) => sanitizeConfigString(p, 512)),
+          publicInterface: (bnd.publicInterface as string[]).map((p) => sanitizeConfigString(p, 512)),
+        };
+        if (Array.isArray(bnd.allowedDependencies) && bnd.allowedDependencies.every((d: unknown) => typeof d === 'string')) {
+          entry.allowedDependencies = (bnd.allowedDependencies as string[]).map((d) => sanitizeConfigString(d));
+        }
+        valid.push(entry);
+      }
+    }
+    if (valid.length > 0) defaults.moduleBoundaries = valid;
+  }
+
+  // topologyHints
+  if (Array.isArray(raw.topologyHints)) {
+    const VALID_DIRECTIONS = new Set(['publish', 'subscribe', 'request', 'respond']);
+    const valid: TopologyHintDef[] = [];
+    for (const t of raw.topologyHints) {
+      if (
+        typeof t === 'object' && t !== null && !Array.isArray(t) &&
+        typeof (t as Record<string, unknown>).source === 'string' && (t as Record<string, unknown>).source !== '' &&
+        typeof (t as Record<string, unknown>).sink === 'string' && (t as Record<string, unknown>).sink !== '' &&
+        typeof (t as Record<string, unknown>).channel === 'string' && (t as Record<string, unknown>).channel !== '' &&
+        typeof (t as Record<string, unknown>).transport === 'string' && (t as Record<string, unknown>).transport !== '' &&
+        typeof (t as Record<string, unknown>).direction === 'string' &&
+        VALID_DIRECTIONS.has((t as Record<string, unknown>).direction as string)
+      ) {
+        const hint = t as Record<string, unknown>;
+        const entry = {
+          source: sanitizeConfigString(hint.source as string, 512),
+          sink: sanitizeConfigString(hint.sink as string, 512),
+          channel: sanitizeConfigString(hint.channel as string),
+          transport: sanitizeConfigString(hint.transport as string),
+          direction: hint.direction as TopologyDirection,
+        };
+        if (entry.source === '' || entry.sink === '' || entry.channel === '' || entry.transport === '') continue;
+        valid.push(entry);
+      }
+    }
+    if (valid.length > 0) defaults.topologyHints = valid;
+  }
+
   // remote -- always default false; only apply if explicitly set to true
   if (typeof raw.remote === 'object' && raw.remote !== null && !Array.isArray(raw.remote)) {
     const rem = raw.remote as Record<string, unknown>;
@@ -526,5 +752,70 @@ export function loadConfigResult(repoRoot: string): ConfigResult {
 
   // Merge onto defaults
   const config = mergeDefaults(parsed as Record<string, unknown>);
+
+  // Dual-source: module-boundaries.json fallback
+  if (!config.moduleBoundaries) {
+    const mbPath = path.join(repoRoot, 'module-boundaries.json');
+    try {
+      const mbText = fs.readFileSync(mbPath, 'utf-8');
+      const mbParsed: unknown = JSON.parse(mbText);
+      if (Array.isArray(mbParsed)) {
+        const mbIssues = validateBoundaryArray(mbParsed);
+        issues.push(...mbIssues.map((i) => ({ ...i, path: `module-boundaries.json:${i.path}` })));
+        if (!mbIssues.some((i) => i.severity === 'error')) {
+          const merged = mergeDefaults({ moduleBoundaries: mbParsed } as Record<string, unknown>);
+          config.moduleBoundaries = merged.moduleBoundaries;
+        }
+      } else {
+        issues.push({ path: 'module-boundaries.json', message: 'File must contain a JSON array of boundary definitions', severity: 'warning' });
+      }
+    } catch {
+      // File doesn't exist or is malformed — silently proceed
+    }
+  } else {
+    // Config has moduleBoundaries — check if external file also exists and warn
+    const mbPath = path.join(repoRoot, 'module-boundaries.json');
+    try {
+      fs.accessSync(mbPath, fs.constants.R_OK);
+      issues.push({ path: 'module-boundaries.json', message: 'module-boundaries.json found but moduleBoundaries in viewer.config.json takes precedence', severity: 'warning' });
+    } catch {
+      // No external file — no warning needed
+    }
+  }
+
   return { config, issues };
+}
+
+function validateBoundaryArray(arr: unknown[]): ConfigIssue[] {
+  const issues: ConfigIssue[] = [];
+  const seenNames = new Set<string>();
+  for (let i = 0; i < arr.length; i++) {
+    const b = arr[i];
+    if (typeof b !== 'object' || b === null || Array.isArray(b)) {
+      issues.push({ path: `[${i}]`, message: 'Boundary entry must be an object', severity: 'error' });
+      continue;
+    }
+    const bnd = b as Record<string, unknown>;
+    if (typeof bnd.name !== 'string' || bnd.name.length === 0) {
+      issues.push({ path: `[${i}].name`, message: '"name" must be a non-empty string', severity: 'error' });
+    } else if ((bnd.name as string).includes(':')) {
+      issues.push({ path: `[${i}].name`, message: '"name" must not contain colons (reserved for rule pattern syntax)', severity: 'error' });
+    } else if (seenNames.has(bnd.name)) {
+      issues.push({ path: `[${i}].name`, message: `Duplicate boundary name "${bnd.name}"`, severity: 'error' });
+    } else {
+      seenNames.add(bnd.name);
+    }
+    if (!Array.isArray(bnd.paths) || bnd.paths.length === 0 || !bnd.paths.every((p: unknown) => typeof p === 'string')) {
+      issues.push({ path: `[${i}].paths`, message: '"paths" must be a non-empty array of strings', severity: 'error' });
+    }
+    if (!Array.isArray(bnd.publicInterface) || bnd.publicInterface.length === 0 || !bnd.publicInterface.every((p: unknown) => typeof p === 'string')) {
+      issues.push({ path: `[${i}].publicInterface`, message: '"publicInterface" must be a non-empty array of strings', severity: 'error' });
+    }
+    if ('allowedDependencies' in bnd && bnd.allowedDependencies !== undefined) {
+      if (!Array.isArray(bnd.allowedDependencies) || !bnd.allowedDependencies.every((d: unknown) => typeof d === 'string')) {
+        issues.push({ path: `[${i}].allowedDependencies`, message: '"allowedDependencies" must be an array of strings', severity: 'warning' });
+      }
+    }
+  }
+  return issues;
 }
